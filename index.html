@@ -67,6 +67,8 @@ button:disabled{opacity:.4;cursor:default}
 #orderBox{display:none;margin-top:14px;padding:12px;border:1px solid var(--accent);border-radius:6px}
 .share #orderBox{display:block}
 #orderBox p{font-size:12.5px;color:var(--dim);margin-bottom:8px}
+#orderBox input,#orderBox textarea{width:100%;background:var(--panel2);border:1px solid var(--line);
+  color:var(--ink);border-radius:4px;padding:7px;font:12.5px var(--mono);margin-bottom:6px;height:auto;resize:none}
 #orderBox a{display:inline-block;background:var(--accent);color:#181307;font-weight:700;
   padding:8px 14px;border-radius:5px;text-decoration:none;font-size:13px}
 ::-webkit-scrollbar{width:9px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
@@ -90,8 +92,8 @@ button:disabled{opacity:.4;cursor:default}
           <option value="knit">Knit ring (chain torus)</option>
         </select></div>
       <div class="mini">
-        <button id="saveBtn">Save settings</button>
-        <button id="loadBtn">Load settings</button>
+        <button id="saveBtn">Export JSON</button>
+        <button id="loadBtn">Import JSON</button>
         <button id="shareBtn">Customer link</button>
         <input type="file" id="loadFile" accept=".json" style="display:none">
       </div>
@@ -282,10 +284,10 @@ button:disabled{opacity:.4;cursor:default}
       <div class="row"><label>Bed (°C)</label><input type="number" id="tB" value="60" step="5"></div>
       <div class="row"><label>First layer (mm/s)</label><input type="number" id="v1" value="18" step="2"></div>
       <div class="row"><label>Base fill (mm/s)</label><input type="number" id="vBase" value="45" step="5"></div>
-      <div class="row"><label>Wall / knit (mm/s)</label><input type="number" id="vWall" value="30" step="5"></div>
+      <div class="row"><label>Wall / knit (mm/s)</label><input type="number" id="vWall" value="20" step="5"></div>
       <div class="row"><label>Travel (mm/s)</label><input type="number" id="vT" value="150" step="10"></div>
       <div class="row"><label>Part cooling fan (%)</label><input type="number" id="fanPct" value="100" step="10" min="0" max="100"></div>
-      <div class="row"><label>Fan from layer</label><input type="number" id="fanL" value="3" step="1"></div>
+      <div class="row"><label>Fan from layer</label><input type="number" id="fanL" value="2" step="1"></div>
       <div class="row"><label>Bed center X,Y (mm)</label><input type="number" id="cx" value="128" step="1"></div>
     </div>
 
@@ -293,7 +295,11 @@ button:disabled{opacity:.4;cursor:default}
     <div class="grp gcodegrp"><h2>End gcode</h2><textarea id="gEnd"></textarea></div>
     <div id="orderBox">
       <p>Like this design? With Layers can print it for you. The pattern stays editable — the print file stays with us.</p>
-      <a id="orderLink" href="#">Order this print</a>
+      <input id="odName" placeholder="Your name">
+      <input id="odContact" placeholder="LINE ID or phone">
+      <textarea id="odNote" placeholder="Notes — color, quantity, deadline" rows="2"></textarea>
+      <button id="orderBtn" class="cta" style="width:100%">Order this print</button>
+      <p id="odStatus" style="margin-top:8px"></p>
     </div>
     <div class="grp"><div class="row"><label>Show travel moves</label><input type="checkbox" id="showT"></div></div>
   </div>
@@ -306,6 +312,8 @@ button:disabled{opacity:.4;cursor:default}
   <div id="bar">
     <button id="gen" class="cta">Generate</button>
     <button id="dl" class="sec" disabled>Download .gcode</button>
+    <button id="cp" class="sec" disabled>Copy</button>
+    <button id="sh" class="sec" disabled>Share</button>
     <div id="stats">—</div>
   </div>
 </main>
@@ -315,8 +323,10 @@ button:disabled{opacity:.4;cursor:default}
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
-const num=id=>parseFloat($(id).value);
+const num=id=>{const v=parseFloat($(id).value);return isFinite(v)?v:0;};
 const TAU=Math.PI*2, FIL_A=Math.PI*Math.pow(1.75/2,2); // 2.405 mm²
+/* order webhook: create an n8n Webhook node (POST) with this exact path */
+const ORDER_WEBHOOK='https://natdanai2707.app.n8n.cloud/webhook/pattern-wly-order';
 /* real Bambu P1S machine gcode captured from Bambu Studio 02.06 (P1S 0.4) */
 const P1S_START="; EXECUTABLE_BLOCK_START\nM73 P0 R25\nM201 X20000 Y20000 Z500 E5000\nM203 X500 Y500 Z20 E30\nM204 P20000 R5000 T20000\nM205 X9.00 Y9.00 Z3.00 E2.50\nM106 S0\nM106 P2 S0\n; FEATURE: Custom\n;===== machine: P1S-0.4 ========================\n;===== date: 20251031 =====================\n;===== turn on the HB fan & MC board fan =================\nM104 S75 ;set extruder temp to turn on the HB fan and prevent filament oozing from nozzle\nM710 A1 S255 ;turn on MC fan by default(P1S)\n;===== reset machine status =================\nM290 X40 Y40 Z2.6666666\nG91\nM17 Z0.4 ; lower the z-motor current\nG380 S2 Z30 F300 ; G380 is same as G38; lower the hotbed , to prevent the nozzle is below the hotbed\nG380 S2 Z-25 F300 ;\nG1 Z5 F300;\nG90\nM17 X1.2 Y1.2 Z0.75 ; reset motor current to default\nM960 S5 P1 ; turn on logo lamp\nG90\nM220 S100 ;Reset Feedrate\nM221 S100 ;Reset Flowrate\nM73.2   R1.0 ;Reset left time magnitude\nM1002 set_gcode_claim_speed_level : 5\nM221 X0 Y0 Z0 ; turn off soft endstop to prevent protential logic problem\nG29.1 Z0 ; clear z-trim value first\nM204 S10000 ; init ACC set to 10m/s^2\n\n;===== heatbed preheat ====================\nM1002 gcode_claim_action:54\nM140 S70 ;set bed temp\nM190 S70 ;wait for bed temp\n\n\n\n;=============turn on fans to prevent PLA jamming=================\n\nM106 P2 S100 ; turn on big fan ,to cool down toolhead\n\n;===== prepare print temperature and material ==========\nM104 S255 ;set extruder temp\nG91\nG0 Z10 F1200\nG90\nG28 X\nM975 S1 ; turn on\nG1 X60 F12000\nG1 Y245\nG1 Y265 F3000\nM620 M\nM620 S0A   ; switch material if AMS exist\n    M109 S255\n    G1 X120 F12000\n\n    G1 X20 Y50 F12000\n    G1 Y-3\n    T0\n    G1 X54 F12000\n    G1 Y265\n    M400\nM621 S0A\nM620.1 E F299.339 T270\n\n\nM412 S1 ; ===turn on filament runout detection===\n\nM109 S250 ;set nozzle to common flush temp\nM106 P1 S0\nG92 E0\nM73 P2 R25\nG1 E50 F200\nM400\nM104 S255\nG92 E0\nM73 P18 R21\nG1 E50 F200\nM400\nM106 P1 S255\nG92 E0\nG1 E5 F300\nM109 S235 ; drop nozzle temp, make filament shink a bit\nG92 E0\nM73 P19 R20\nG1 E-0.5 F300\n\nM73 P20 R20\nG1 X70 F9000\nG1 X76 F15000\nG1 X65 F15000\nG1 X76 F15000\nG1 X65 F15000; shake to put down garbage\nG1 X80 F6000\nG1 X95 F15000\nG1 X80 F15000\nM73 P21 R20\nG1 X165 F15000; wipe and shake\nM400\nM106 P1 S0\n;===== prepare print temperature and material end =====\n\n\n;===== wipe nozzle ===============================\nM1002 gcode_claim_action : 14\nM975 S1\nM106 S255\nG1 X65 Y230 F18000\nG1 Y264 F6000\nM109 S235\nG1 X100 F18000 ; first wipe mouth\n\nG0 X135 Y253 F20000  ; move to exposed steel surface edge\nG28 Z P0 T300; home z with low precision,permit 300deg temperature\nG29.2 S0 ; turn off ABL\nG0 Z5 F20000\n\nG1 X60 Y265\nG92 E0\nG1 E-0.5 F300 ; retrack more\nG1 X100 F5000; second wipe mouth\nG1 X70 F15000\nG1 X100 F5000\nG1 X70 F15000\nG1 X100 F5000\nG1 X70 F15000\nG1 X100 F5000\nG1 X70 F15000\nG1 X90 F5000\nG0 X128 Y261 Z-1.5 F20000  ; move to exposed steel surface and stop the nozzle\nM104 S140 ; set temp down to heatbed acceptable\nM106 S255 ; turn on fan (G28 has turn off fan)\n\nM221 S; push soft endstop status\nM221 Z0 ;turn off Z axis endstop\nG0 Z0.5 F20000\nG0 X125 Y259.5 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y262.5\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y260.0\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y262.0\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y260.5\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y261.5\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y261.0\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 X128\nG2 I0.5 J0 F300\nG2 I0.5 J0 F300\nG2 I0.5 J0 F300\nG2 I0.5 J0 F300\n\nM109 S140 ; wait nozzle temp down to heatbed acceptable\nG2 I0.5 J0 F3000\nG2 I0.5 J0 F3000\nG2 I0.5 J0 F3000\nG2 I0.5 J0 F3000\n\nM221 R; pop softend status\nG1 Z10 F1200\nM400\nG1 Z10\nG1 F30000\nG1 X230 Y15\nG29.2 S1 ; turn on ABL\n;G28 ; home again after hard wipe mouth\nM106 S0 ; turn off fan , too noisy\n;===== wipe nozzle end ================================\n\n\n;===== bed leveling ==================================\nM1002 judge_flag g29_before_print_flag\nM622 J1\n\n    M1002 gcode_claim_action : 1\n    G29 A X107.74 Y101.828 I40.3909 J71.1259\n    M400\n    M500 ; save cali data\n\nM623\n;===== bed leveling end ================================\n\n;===== home after wipe mouth============================\nM1002 judge_flag g29_before_print_flag\nM622 J0\n\n    M1002 gcode_claim_action : 13\n    G28\n\nM623\n;===== home after wipe mouth end =======================\n\nM975 S1 ; turn on vibration supression\n\n\n;=============turn on fans to prevent PLA jamming=================\n\nM106 P2 S100 ; turn on big fan ,to cool down toolhead\n\n\nM104 S255 ; set extrude temp earlier, to reduce wait time\n\n;===== mech mode fast check============================\nG1 X128 Y128 Z10 F20000\nM400 P200\nM970.3 Q1 A7 B30 C80  H15 K0\nM974 Q1 S2 P0\n\nG1 X128 Y128 Z10 F20000\nM400 P200\nM970.3 Q0 A7 B30 C90 Q0 H15 K0\nM974 Q0 S2 P0\n\nM975 S1\nG1 F30000\nG1 X230 Y15\nG28 X ; re-home XY\n;===== fmech mode fast check============================\n\n\n;===== nozzle load line ===============================\nM975 S1\nG90\nM83\nT1000\nG1 X18.0 Y1.0 Z0.8 F18000;Move to start position\nM109 S255\nG1 Z0.2\nG0 E2 F300\nG0 X240 E15 F904.991\nG0 Y11 E0.700 F226.248\nG0 X239.5\nG0 E0.2\nG0 Y1.5 E0.700\nG0 X18 E15 F904.991\nM400\n\n;===== for Textured PEI Plate , lower the nozzle as the nozzle was touching topmost of the texture when homing ==\n;curr_bed_type=Textured PEI Plate\n\nG29.1 Z-0.04 ; for Textured PEI Plate\n\n;========turn off light and wait extrude temperature =============\nM1002 gcode_claim_action : 0\nM106 S0 ; turn off fan\nM106 P2 S0 ; turn off big fan\nM106 P3 S0 ; turn off chamber fan\n\nM975 S1 ; turn on mech mode supression";
 const P1S_END="; filament end gcode \n\n;===== date: 20230428 =====================\nM400 ; wait for buffer to clear\nG92 E0 ; zero the extruder\nG1 E-0.8 F1800 ; retract\nG1 Z3.5 F900 ; lower z a little\nG1 X65 Y245 F12000 ; move to safe pos \nG1 Y265 F3000\n\nG1 X65 Y245 F12000\nG1 Y265 F3000\nM140 S0 ; turn off bed\nM106 S0 ; turn off fan\nM106 P2 S0 ; turn off remote part cooling fan\nM106 P3 S0 ; turn off chamber cooling fan\n\nG1 X100 F12000 ; wipe\n; pull back filament to AMS\nM620 S255\nG1 X20 Y50 F12000\nG1 Y-3\nT255\nG1 X65 F12000\nG1 Y265\nG1 X100 F12000 ; wipe\nM621 S255\nM104 S0 ; turn off hotend\n\nM622.1 S1 ; for prev firware, default turned on\nM1002 judge_flag timelapse_record_flag\nM622 J1\n    M400 ; wait all motion done\n    M991 S0 P-1 ;end smooth timelapse at safe pos\n    M400 S3 ;wait for last picture to be taken\nM623; end of \"timelapse_record_flag\"\n\nM400 ; wait all motion done\nM17 S\nM17 Z0.4 ; lower z motor current to reduce impact if there is something in the bottom\n\n    G1 Z103 F600\n    G1 Z101\n\nM400 P100\nM17 R ; restore z current\n\nM220 S100  ; Reset feedrate magnitude\nM201.2 K1.0 ; Reset acc magnitude\nM73.2   R1.0 ;Reset left time magnitude\nM1002 set_gcode_claim_speed_level : 0\n\nM17 X0.8 Y0.8 Z0.5 ; lower motor current to 45% power\nM73 P100 R0\n; EXECUTABLE_BLOCK_END";
@@ -458,7 +468,7 @@ function buildTray(P){
         paths.push(circlePath(cx,cy,P.holeD/2+P.strandW*1.4,z,v,P.strandW,rot));
       }
       const pts=gPts.map(q=>[cx+q[0],cy+q[1],z]);
-      paths.push({pts,v:Math.min(v,P.vBase*0.8),w:P.strandW});
+      paths.push({pts,v:Math.min(v,25),w:P.strandW});
     }
     else if(P.pattern==='meander'){
       const pitch=Math.max(P.cell,P.lw*2.2), amp=(pitch-P.lw)/2;
@@ -539,7 +549,7 @@ function buildKnit(P){
   }
   for(let i=0;i<P.kLayers;i++){
     const zc=P.lh*(i+1), ramp=Math.min(1,i/4), alt=(i%2)*Math.PI;
-    const v=i===0?P.v1:P.vWall;
+    const v=i===0?P.v1:Math.min(P.vWall,22);
     const n=Math.max(200,Math.ceil(TAU*(Rc+P.kR)/0.3)), pts=[];
     const seam=i*2.399963;
     for(let k=0;k<=n;k++){
@@ -693,7 +703,7 @@ function buildWeave(P){
     const g=annulusGrowth(0, a=>Math.max(2,shape(a)-fillInset),
       Math.max(P.wvGap,w*1.6), P.wvSeed);
     for(let L=0;L<P.wvLayers;L++){
-      const z=zf(nSolid+L), h=(nSolid===0&&L===0)?P.flh:P.lh, v=(nSolid===0&&L===0)?P.v1:P.vBase*0.7;
+      const z=zf(nSolid+L), h=(nSolid===0&&L===0)?P.flh:P.lh, v=(nSolid===0&&L===0)?P.v1:Math.min(P.vBase*0.7,25);
       for(let ri=0;ri<Math.max(1,P.wvRim);ri++)paths.push(shapeLoopW(w/2+ri*w*0.95,z,v,w,h));
       paths.push({pts:g.map(q=>[cx+q[0],cy+q[1],z]),v,w,h});
     }
@@ -701,7 +711,7 @@ function buildWeave(P){
   else
   /* weave layers: sine rows, opposite phase per row; each layer rotated by cross angle */
   for(let L=0;L<P.wvLayers;L++){
-    const z=zf(nSolid+L), h=(nSolid===0&&L===0)?P.flh:P.lh, v=(nSolid===0&&L===0)?P.v1:P.vBase*0.7;
+    const z=zf(nSolid+L), h=(nSolid===0&&L===0)?P.flh:P.lh, v=(nSolid===0&&L===0)?P.v1:Math.min(P.vBase*0.7,25);
     for(let ri=0;ri<Math.max(1,P.wvRim);ri++)paths.push(shapeLoopW(w/2+ri*w*0.95,z,v,w,h));
     const ang=L*P.wvCross*Math.PI/180, cA=Math.cos(ang), sA=Math.sin(ang);
     let idx=0;
@@ -730,7 +740,7 @@ function buildWeave(P){
     const curve=P.wvCurveOn?(profileAt(t)-profileAt(0))*P.wvCurveD/0.5:0;
     const flare=P.wvFlare*j+curve;
     const tw=P.wvTwistW*Math.PI/180*j;
-    if(j===0){paths.push(shapeLoopW(w/2,z,P.vWall,w));paths.push(shapeLoopW(1.5*w,z,P.vWall,w));}
+    if(j===0){const vb=Math.min(P.vWall,22);paths.push(shapeLoopW(w/2,z,vb,w));paths.push(shapeLoopW(1.5*w,z,vb,w));}
     const n=Math.max(200,Math.ceil(TAU*(Rmax+flare)/0.3)), pts=[];
     const seam=j*2.399963;
     for(let i=0;i<=n;i++){
@@ -740,7 +750,7 @@ function buildWeave(P){
       const zz=Math.max(baseTop+0.4, z+P.wvZAmp*ramp*Math.sin(P.wvK*a+alt+Math.PI/2));
       pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a),zz]);
     }
-    paths.push({pts,v:P.vWall,w});
+    paths.push({pts,v:Math.min(P.vWall,22),w});
   }
   return paths;
 }
@@ -871,6 +881,7 @@ function buildVase(P){
   const perim0=TAU*Rx*0.9;
   const nSeg=Math.max(140,Math.ceil(perim0/0.4));
 
+  const vWallEff=P.stOn?Math.min(P.vWall,25):P.vWall;
   const emit=(pts,wpts,v,anyW)=>{
     const p={pts,v,w:P.lw};
     if(anyW)p.wpts=wpts;
@@ -908,7 +919,7 @@ function buildVase(P){
       pts.push([cx+r*Math.cos(a),cy+r*sy*Math.sin(a),z]);
       wpts.push(wq);
     }
-    emit(pts,wpts,P.vWall,anyW);
+    emit(pts,wpts,vWallEff,anyW);
   } else {
     for(let j=0;j<wallLayers;j++){
       const z=zBase+(j+1)*P.lh;
@@ -934,7 +945,7 @@ function buildVase(P){
         pts.push([cx+r*Math.cos(a),cy+r*sy*Math.sin(a),z]);
         wpts.push(wq);
       }
-      emit(pts,wpts,P.vWall,anyW);
+      emit(pts,wpts,vWallEff,anyW);
     }
   }
   return paths;
@@ -1160,11 +1171,7 @@ const ALL_IDS=['mode','dia','baseLayers','pattern','holeD','gapS','strandW','see
 'wvWallLayers','wvK','wvZAmp','wvRAmp','wvFlare','wvCross','wvSolid','wvCurveD','wvCurveOn',
 'wvBase','wvSides','wvCornerR','wvGap','wvSeed','wvRim','wvTwistW'];
 $('saveBtn').onclick=()=>{
-  const s=collectSettings();
-  const blob=new Blob([JSON.stringify(s,null,1)],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download='pattern_wly_settings.json';
-  a.click(); URL.revokeObjectURL(a.href);
+  downloadFile(JSON.stringify(collectSettings(),null,1),'pattern_wly_settings.json','application/json');
 };
 function collectSettings(){
   const s={sides:vSides,profile:profPts};
@@ -1201,15 +1208,42 @@ $('shareBtn').onclick=()=>{
     navigator.clipboard.writeText(url).then(done,()=>prompt('Customer link:',url));
   else prompt('Customer link:',url);
 };
+/* Orders POST here. Point this at an n8n webhook (or any endpoint that accepts JSON).
+   If unreachable, falls back to email with the design link. */
+const ORDER_ENDPOINT='https://natdanai2707.app.n8n.cloud/webhook/pattern-wly-order';
+async function sendOrder(){
+  const b=$('orderBtn');
+  const payload={
+    name:$('odName').value.trim(),
+    contact:$('odContact').value.trim(),
+    note:$('odNote').value.trim(),
+    link:location.href,
+    settings:collectSettings(),
+    ts:new Date().toISOString()
+  };
+  if(!payload.contact){$('odStatus').textContent='Please add a LINE ID or phone so we can reach you.';return;}
+  b.disabled=true;b.textContent='Sending…';
+  try{
+    const r=await fetch(ORDER_ENDPOINT,{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!r.ok)throw new Error('bad status');
+    b.style.display='none';
+    $('odStatus').textContent='Order received — With Layers will contact you soon. You can close this page.';
+  }catch(e){
+    b.disabled=false;b.textContent='Order this print';
+    $('odStatus').textContent='Could not reach the order server — opening email instead.';
+    location.href='mailto:natdanai2707@gmail.com?subject='+
+      encodeURIComponent('Pattern.wly print order')+'&body='+
+      encodeURIComponent('Order from: '+payload.name+' ('+payload.contact+')\n'+payload.note+'\n\nDesign: '+payload.link);
+  }
+}
 function initFromHash(){
   const h=location.hash.slice(1); if(!h)return;
   const q={}; h.split('&').forEach(kv=>{const i=kv.indexOf('=');
     if(i>0)q[kv.slice(0,i)]=kv.slice(i+1);});
   if(q.share==='1'){
     document.body.classList.add('share');
-    $('orderLink').href='mailto:natdanai2707@gmail.com?subject='+
-      encodeURIComponent('Pattern.wly print order')+'&body='+
-      encodeURIComponent('I would like to order this design:\n'+location.href);
+    $('orderBtn').onclick=sendOrder;
   }
   if(q.s){
     try{applySettings(JSON.parse(decodeURIComponent(escape(atob(q.s)))));}catch(e){}
@@ -1227,20 +1261,50 @@ function generate(){
   $('stats').textContent=
     `filament ${(s.fil/1000).toFixed(2)} m · ${s.g.toFixed(1)} g\n`+
     `path ${(s.extLen/1000).toFixed(1)} m · ~${Math.round(s.tMin)} min · ${s.paths} paths`;
-  $('dl').disabled=false;
+  $('dl').disabled=false; $('cp').disabled=false; $('sh').disabled=false;
   $('tag').textContent=P.mode==='knit'?'knit ring':
     P.mode==='vase'?`vase · ${P.pPat}${P.stOn?' + stitches':''} · ${P.fFill} floor`:
     P.mode==='weave'?'woven tray · With Layers':
     P.pattern+(P.wallOn?' + fin wall':'');
 }
 $('gen').onclick=generate;
+function downloadFile(text,name,mime){
+  const blob=new Blob([text],{type:mime||'application/octet-stream'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=name; a.rel='noopener'; a.style.display='none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},3000);
+}
 $('dl').onclick=()=>{
   if(!lastG)return;
-  const blob=new Blob([lastG.text],{type:'text/plain'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='pattern_wly_'+$('mode').value+'.gcode';
-  a.click(); URL.revokeObjectURL(a.href);
+  downloadFile(lastG.text,'pattern_wly_'+$('mode').value+'.gcode');
+};
+$('cp').onclick=async()=>{
+  if(!lastG)return;
+  try{
+    await navigator.clipboard.writeText(lastG.text);
+    $('cp').textContent='Copied!';
+  }catch(e){
+    // fallback for webviews without clipboard API
+    const ta=document.createElement('textarea');
+    ta.value=lastG.text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    $('cp').textContent='Copied!';
+  }
+  setTimeout(()=>$('cp').textContent='Copy',1800);
+};
+$('sh').onclick=async()=>{
+  if(!lastG)return;
+  const f=new File([lastG.text],'pattern_wly_'+$('mode').value+'.gcode',{type:'text/plain'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    try{await navigator.share({files:[f],title:'Pattern.wly gcode'});}catch(e){}
+  }else{
+    $('sh').textContent='Open in Chrome';
+    setTimeout(()=>$('sh').textContent='Share',2200);
+    downloadFile(lastG.text,'pattern_wly_'+$('mode').value+'.gcode');
+  }
 };
 $('mode').onchange=()=>{
   document.querySelectorAll('[data-mode]').forEach(el=>
