@@ -63,7 +63,7 @@ button:disabled{opacity:.4;cursor:default}
   aside{width:100%;min-width:0;max-height:55vh}
   main{height:45vh}
 }
-.share #dl,.share #saveBtn,.share #loadBtn,.share #shareBtn,.share .gcodegrp{display:none!important}
+.share #dl,.share #cp,.share #sh,.share #saveBtn,.share #loadBtn,.share #shareBtn,.share .gcodegrp{display:none!important}
 #orderBox{display:none;margin-top:14px;padding:12px;border:1px solid var(--accent);border-radius:6px}
 .share #orderBox{display:block}
 #orderBox p{font-size:12.5px;color:var(--dim);margin-bottom:8px}
@@ -329,9 +329,9 @@ const TAU=Math.PI*2, FIL_A=Math.PI*Math.pow(1.75/2,2); // 2.405 mm²
 const ORDER_WEBHOOK='https://natdanai2707.app.n8n.cloud/webhook/pattern-wly-order';
 /* real Bambu P1S machine gcode captured from Bambu Studio 02.06 (P1S 0.4) */
 const P1S_START="; EXECUTABLE_BLOCK_START\nM73 P0 R25\nM201 X20000 Y20000 Z500 E5000\nM203 X500 Y500 Z20 E30\nM204 P20000 R5000 T20000\nM205 X9.00 Y9.00 Z3.00 E2.50\nM106 S0\nM106 P2 S0\n; FEATURE: Custom\n;===== machine: P1S-0.4 ========================\n;===== date: 20251031 =====================\n;===== turn on the HB fan & MC board fan =================\nM104 S75 ;set extruder temp to turn on the HB fan and prevent filament oozing from nozzle\nM710 A1 S255 ;turn on MC fan by default(P1S)\n;===== reset machine status =================\nM290 X40 Y40 Z2.6666666\nG91\nM17 Z0.4 ; lower the z-motor current\nG380 S2 Z30 F300 ; G380 is same as G38; lower the hotbed , to prevent the nozzle is below the hotbed\nG380 S2 Z-25 F300 ;\nG1 Z5 F300;\nG90\nM17 X1.2 Y1.2 Z0.75 ; reset motor current to default\nM960 S5 P1 ; turn on logo lamp\nG90\nM220 S100 ;Reset Feedrate\nM221 S100 ;Reset Flowrate\nM73.2   R1.0 ;Reset left time magnitude\nM1002 set_gcode_claim_speed_level : 5\nM221 X0 Y0 Z0 ; turn off soft endstop to prevent protential logic problem\nG29.1 Z0 ; clear z-trim value first\nM204 S10000 ; init ACC set to 10m/s^2\n\n;===== heatbed preheat ====================\nM1002 gcode_claim_action:54\nM140 S70 ;set bed temp\nM190 S70 ;wait for bed temp\n\n\n\n;=============turn on fans to prevent PLA jamming=================\n\nM106 P2 S100 ; turn on big fan ,to cool down toolhead\n\n;===== prepare print temperature and material ==========\nM104 S255 ;set extruder temp\nG91\nG0 Z10 F1200\nG90\nG28 X\nM975 S1 ; turn on\nG1 X60 F12000\nG1 Y245\nG1 Y265 F3000\nM620 M\nM620 S0A   ; switch material if AMS exist\n    M109 S255\n    G1 X120 F12000\n\n    G1 X20 Y50 F12000\n    G1 Y-3\n    T0\n    G1 X54 F12000\n    G1 Y265\n    M400\nM621 S0A\nM620.1 E F299.339 T270\n\n\nM412 S1 ; ===turn on filament runout detection===\n\nM109 S250 ;set nozzle to common flush temp\nM106 P1 S0\nG92 E0\nM73 P2 R25\nG1 E50 F200\nM400\nM104 S255\nG92 E0\nM73 P18 R21\nG1 E50 F200\nM400\nM106 P1 S255\nG92 E0\nG1 E5 F300\nM109 S235 ; drop nozzle temp, make filament shink a bit\nG92 E0\nM73 P19 R20\nG1 E-0.5 F300\n\nM73 P20 R20\nG1 X70 F9000\nG1 X76 F15000\nG1 X65 F15000\nG1 X76 F15000\nG1 X65 F15000; shake to put down garbage\nG1 X80 F6000\nG1 X95 F15000\nG1 X80 F15000\nM73 P21 R20\nG1 X165 F15000; wipe and shake\nM400\nM106 P1 S0\n;===== prepare print temperature and material end =====\n\n\n;===== wipe nozzle ===============================\nM1002 gcode_claim_action : 14\nM975 S1\nM106 S255\nG1 X65 Y230 F18000\nG1 Y264 F6000\nM109 S235\nG1 X100 F18000 ; first wipe mouth\n\nG0 X135 Y253 F20000  ; move to exposed steel surface edge\nG28 Z P0 T300; home z with low precision,permit 300deg temperature\nG29.2 S0 ; turn off ABL\nG0 Z5 F20000\n\nG1 X60 Y265\nG92 E0\nG1 E-0.5 F300 ; retrack more\nG1 X100 F5000; second wipe mouth\nG1 X70 F15000\nG1 X100 F5000\nG1 X70 F15000\nG1 X100 F5000\nG1 X70 F15000\nG1 X100 F5000\nG1 X70 F15000\nG1 X90 F5000\nG0 X128 Y261 Z-1.5 F20000  ; move to exposed steel surface and stop the nozzle\nM104 S140 ; set temp down to heatbed acceptable\nM106 S255 ; turn on fan (G28 has turn off fan)\n\nM221 S; push soft endstop status\nM221 Z0 ;turn off Z axis endstop\nG0 Z0.5 F20000\nG0 X125 Y259.5 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y262.5\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y260.0\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y262.0\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y260.5\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y261.5\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y261.0\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 X128\nG2 I0.5 J0 F300\nG2 I0.5 J0 F300\nG2 I0.5 J0 F300\nG2 I0.5 J0 F300\n\nM109 S140 ; wait nozzle temp down to heatbed acceptable\nG2 I0.5 J0 F3000\nG2 I0.5 J0 F3000\nG2 I0.5 J0 F3000\nG2 I0.5 J0 F3000\n\nM221 R; pop softend status\nG1 Z10 F1200\nM400\nG1 Z10\nG1 F30000\nG1 X230 Y15\nG29.2 S1 ; turn on ABL\n;G28 ; home again after hard wipe mouth\nM106 S0 ; turn off fan , too noisy\n;===== wipe nozzle end ================================\n\n\n;===== bed leveling ==================================\nM1002 judge_flag g29_before_print_flag\nM622 J1\n\n    M1002 gcode_claim_action : 1\n    G29 A X107.74 Y101.828 I40.3909 J71.1259\n    M400\n    M500 ; save cali data\n\nM623\n;===== bed leveling end ================================\n\n;===== home after wipe mouth============================\nM1002 judge_flag g29_before_print_flag\nM622 J0\n\n    M1002 gcode_claim_action : 13\n    G28\n\nM623\n;===== home after wipe mouth end =======================\n\nM975 S1 ; turn on vibration supression\n\n\n;=============turn on fans to prevent PLA jamming=================\n\nM106 P2 S100 ; turn on big fan ,to cool down toolhead\n\n\nM104 S255 ; set extrude temp earlier, to reduce wait time\n\n;===== mech mode fast check============================\nG1 X128 Y128 Z10 F20000\nM400 P200\nM970.3 Q1 A7 B30 C80  H15 K0\nM974 Q1 S2 P0\n\nG1 X128 Y128 Z10 F20000\nM400 P200\nM970.3 Q0 A7 B30 C90 Q0 H15 K0\nM974 Q0 S2 P0\n\nM975 S1\nG1 F30000\nG1 X230 Y15\nG28 X ; re-home XY\n;===== fmech mode fast check============================\n\n\n;===== nozzle load line ===============================\nM975 S1\nG90\nM83\nT1000\nG1 X18.0 Y1.0 Z0.8 F18000;Move to start position\nM109 S255\nG1 Z0.2\nG0 E2 F300\nG0 X240 E15 F904.991\nG0 Y11 E0.700 F226.248\nG0 X239.5\nG0 E0.2\nG0 Y1.5 E0.700\nG0 X18 E15 F904.991\nM400\n\n;===== for Textured PEI Plate , lower the nozzle as the nozzle was touching topmost of the texture when homing ==\n;curr_bed_type=Textured PEI Plate\n\nG29.1 Z-0.04 ; for Textured PEI Plate\n\n;========turn off light and wait extrude temperature =============\nM1002 gcode_claim_action : 0\nM106 S0 ; turn off fan\nM106 P2 S0 ; turn off big fan\nM106 P3 S0 ; turn off chamber fan\n\nM975 S1 ; turn on mech mode supression";
-const P1S_END="; filament end gcode \n\n;===== date: 20230428 =====================\nM400 ; wait for buffer to clear\nG92 E0 ; zero the extruder\nG1 E-0.8 F1800 ; retract\nG1 Z3.5 F900 ; lower z a little\nG1 X65 Y245 F12000 ; move to safe pos \nG1 Y265 F3000\n\nG1 X65 Y245 F12000\nG1 Y265 F3000\nM140 S0 ; turn off bed\nM106 S0 ; turn off fan\nM106 P2 S0 ; turn off remote part cooling fan\nM106 P3 S0 ; turn off chamber cooling fan\n\nG1 X100 F12000 ; wipe\n; pull back filament to AMS\nM620 S255\nG1 X20 Y50 F12000\nG1 Y-3\nT255\nG1 X65 F12000\nG1 Y265\nG1 X100 F12000 ; wipe\nM621 S255\nM104 S0 ; turn off hotend\n\nM622.1 S1 ; for prev firware, default turned on\nM1002 judge_flag timelapse_record_flag\nM622 J1\n    M400 ; wait all motion done\n    M991 S0 P-1 ;end smooth timelapse at safe pos\n    M400 S3 ;wait for last picture to be taken\nM623; end of \"timelapse_record_flag\"\n\nM400 ; wait all motion done\nM17 S\nM17 Z0.4 ; lower z motor current to reduce impact if there is something in the bottom\n\n    G1 Z103 F600\n    G1 Z101\n\nM400 P100\nM17 R ; restore z current\n\nM220 S100  ; Reset feedrate magnitude\nM201.2 K1.0 ; Reset acc magnitude\nM73.2   R1.0 ;Reset left time magnitude\nM1002 set_gcode_claim_speed_level : 0\n\nM17 X0.8 Y0.8 Z0.5 ; lower motor current to 45% power\nM73 P100 R0\n; EXECUTABLE_BLOCK_END";
+const P1S_END="; filament end gcode \n\n;===== date: 20230428 =====================\nM400 ; wait for buffer to clear\nG92 E0 ; zero the extruder\nG1 E-0.8 F1800 ; retract\nG1 Z{ZAFTER} F900 ; raise z above print\nG1 X65 Y245 F12000 ; move to safe pos\nG1 Y265 F3000\n\nG1 X65 Y245 F12000\nG1 Y265 F3000\nM140 S0 ; turn off bed\nM106 S0 ; turn off fan\nM106 P2 S0 ; turn off remote part cooling fan\nM106 P3 S0 ; turn off chamber cooling fan\n\nG1 X100 F12000 ; wipe\n; pull back filament to AMS\nM620 S255\nG1 X20 Y50 F12000\nG1 Y-3\nT255\nG1 X65 F12000\nG1 Y265\nG1 X100 F12000 ; wipe\nM621 S255\nM104 S0 ; turn off hotend\n\nM622.1 S1 ; for prev firware, default turned on\nM1002 judge_flag timelapse_record_flag\nM622 J1\n    M400 ; wait all motion done\n    M991 S0 P-1 ;end smooth timelapse at safe pos\n    M400 S3 ;wait for last picture to be taken\nM623; end of \"timelapse_record_flag\"\n\nM400 ; wait all motion done\nM17 S\nM17 Z0.4 ; lower z motor current to reduce impact if there is something in the bottom\n\n    G1 Z{ZPARK} F600\n    G1 Z{ZPARK2}\n\nM400 P100\nM17 R ; restore z current\n\nM220 S100  ; Reset feedrate magnitude\nM201.2 K1.0 ; Reset acc magnitude\nM73.2   R1.0 ;Reset left time magnitude\nM1002 set_gcode_claim_speed_level : 0\n\nM17 X0.8 Y0.8 Z0.5 ; lower motor current to 45% power\nM73 P100 R0\n; EXECUTABLE_BLOCK_END";
 
-$('gStart').value=[
+const GEN_START=[
 '; Pattern.wly start (minimal, generic)',
 '; Bambu: you can paste Bambu Studio machine-start gcode here instead',
 'G90','M83',
@@ -346,12 +346,13 @@ $('gStart').value=[
 'G1 X15 Y15.6 E5.5 F1500',
 'G1 Z1 F1200'
 ].join('\n');
-
-$('gEnd').value=[
+const GEN_END=[
 'M104 S0','M140 S0','M106 S0',
 'G91','G1 Z12 F3000','G90',
 'G1 X20 Y230 F9000','M84'
 ].join('\n');
+$('gStart').value=GEN_START;
+$('gEnd').value=GEN_END;
 
 /* ================= shared helpers ================= */
 function circlePath(cx,cy,r,z,v,w,seam=0,ds=0.35){
@@ -445,9 +446,9 @@ function annulusGrowth(Rin,Rout,S,seed){
 /* ================= tray builder (unchanged behaviour) ================= */
 function buildTray(P){
   const paths=[], R=P.dia/2, cx=P.cx, cy=P.cx;
-  const Rf=R-2.1*P.lw;
-  paths.push(circlePath(cx,cy,R+5,P.lh,P.v1,P.lw));
-  paths.push(circlePath(cx,cy,R+5-P.lw,P.lh,P.v1,P.lw));
+  const Rf=R-2.1*P.lw, zf=L=>P.flh+L*P.lh;
+  paths.push(Object.assign(circlePath(cx,cy,R+5,P.flh,P.v1,P.flw),{h:P.flh}));
+  paths.push(Object.assign(circlePath(cx,cy,R+5-P.flw,P.flh,P.v1,P.flw),{h:P.flh}));
 
   let gPts=null, gHole=false;
   if(P.pattern==='growth'){
@@ -457,18 +458,19 @@ function buildTray(P){
   }
 
   for(let L=0;L<P.baseLayers;L++){
-    const z=P.lh*(L+1), v=L===0?P.v1:P.vBase, rot=L*0.35;
+    const z=zf(L), v=L===0?P.v1:P.vBase, rot=L*0.35;
+    const h=L===0?P.flh:P.lh, ww=L===0?P.flw:P.lw;
     if(P.pattern!=='growth'||P.wallOn){
-      paths.push(circlePath(cx,cy,R-P.lw/2,z,v,P.lw,rot));
-      paths.push(circlePath(cx,cy,R-1.5*P.lw,z,v,P.lw,rot));
+      paths.push(Object.assign(circlePath(cx,cy,R-P.lw/2,z,v,ww,rot),{h}));
+      paths.push(Object.assign(circlePath(cx,cy,R-1.5*P.lw,z,v,ww,rot),{h}));
     }
     if(P.pattern==='growth'){
       if(gHole){
-        paths.push(circlePath(cx,cy,P.holeD/2+P.strandW/2,z,v,P.strandW,rot));
-        paths.push(circlePath(cx,cy,P.holeD/2+P.strandW*1.4,z,v,P.strandW,rot));
+        paths.push(Object.assign(circlePath(cx,cy,P.holeD/2+P.strandW/2,z,v,P.strandW,rot),{h}));
+        paths.push(Object.assign(circlePath(cx,cy,P.holeD/2+P.strandW*1.4,z,v,P.strandW,rot),{h}));
       }
       const pts=gPts.map(q=>[cx+q[0],cy+q[1],z]);
-      paths.push({pts,v:Math.min(v,25),w:P.strandW});
+      paths.push({pts,v:Math.min(v,25),w:P.strandW,h});
     }
     else if(P.pattern==='meander'){
       const pitch=Math.max(P.cell,P.lw*2.2), amp=(pitch-P.lw)/2;
@@ -482,7 +484,7 @@ function buildTray(P){
         const rr=Math.min(Rf, r+amp*ramp*Math.sin(TAU*len/P.wlen));
         pts.push([cx+rr*Math.cos(th),cy+rr*Math.sin(th),z]);
       }
-      paths.push({pts,v,w:P.lw});
+      paths.push({pts,v,w:ww,h});
     }
     else if(P.pattern==='waves'||P.pattern==='concentric'){
       const amp=P.pattern==='waves'?P.wAmp:0, N=P.pattern==='waves'?P.wN:1;
@@ -495,7 +497,7 @@ function buildTray(P){
         pts.push([cx+rr*Math.cos(th),cy+rr*Math.sin(th),z]);
         th+=0.3/Math.max(r,1.2);
       }
-      paths.push({pts,v,w:P.lw});
+      paths.push({pts,v,w:ww,h});
     }
     else if(P.pattern==='hilbert'){
       const cell=Math.max(P.hCell,P.lw*1.6);
@@ -515,16 +517,16 @@ function buildTray(P){
       let run=null;
       for(let i=0;i<hp.length;i++){
         if(inside(hp[i])){ if(!run)run=[]; run.push([hp[i][0],hp[i][1],z]); }
-        else if(run){ if(run.length>1)paths.push({pts:run,v,w:P.lw}); run=null; }
+        else if(run){ if(run.length>1)paths.push({pts:run,v,w:ww,h}); run=null; }
       }
-      if(run&&run.length>1)paths.push({pts:run,v,w:P.lw});
+      if(run&&run.length>1)paths.push({pts:run,v,w:ww,h});
     }
   }
 
   if(P.wallOn){
     const golden=2.399963;
     for(let j=0;j<P.wallLayers;j++){
-      const z=P.lh*(P.baseLayers+j+1);
+      const z=zf(P.baseLayers+j);
       const Rw=R-P.lw/2+P.flare*j;
       const seam=j*golden, tw=j*P.twist*Math.PI/180;
       const n=Math.max(120,Math.ceil(TAU*(Rw+P.finDepth)/0.3)), pts=[];
@@ -545,20 +547,21 @@ function buildKnit(P){
   const paths=[], Rc=P.ringD/2, cx=P.cx, cy=P.cx;
   if(P.brim){
     for(let b=-3;b<=3;b++)
-      paths.push(circlePath(cx,cy,Rc+b*P.lw*0.95,P.lh,P.v1,P.lw));
+      paths.push(Object.assign(circlePath(cx,cy,Rc+b*P.flw*0.95,P.flh,P.v1,P.flw),{h:P.flh}));
   }
   for(let i=0;i<P.kLayers;i++){
-    const zc=P.lh*(i+1), ramp=Math.min(1,i/4), alt=(i%2)*Math.PI;
-    const v=i===0?P.v1:Math.min(P.vWall,22);
+    const zc=P.flh+i*P.lh, ramp=Math.min(1,i/4), alt=(i%2)*Math.PI;
+    const v=Math.min(i===0?P.v1:P.vWall,22);
     const n=Math.max(200,Math.ceil(TAU*(Rc+P.kR)/0.3)), pts=[];
     const seam=i*2.399963;
     for(let k=0;k<=n;k++){
       const a=seam+TAU*k/n;
       const r=Rc+P.kR*ramp*Math.sin(P.kN*a+alt);
-      const z=Math.max(P.lh*0.8, zc+P.kZ*ramp*Math.sin(P.kN*a+alt+Math.PI/2));
+      const z=Math.max(P.flh, zc+P.kZ*ramp*Math.sin(P.kN*a+alt+Math.PI/2));
       pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a),z]);
     }
-    paths.push({pts,v,w:P.lw});
+    const p={pts,v,w:i===0?P.flw:P.lw}; if(i===0)p.h=P.flh;
+    paths.push(p);
   }
   return paths;
 }
@@ -672,8 +675,8 @@ function buildWeave(P){
   };
 
   // skirt
-  paths.push(circlePath(cx,cy,Rmax+5,P.flh,P.v1,P.flw));
-  paths.push(circlePath(cx,cy,Rmax+5-P.flw,P.flh,P.v1,P.flw));
+  paths.push(Object.assign(circlePath(cx,cy,Rmax+5,P.flh,P.v1,P.flw),{h:P.flh}));
+  paths.push(Object.assign(circlePath(cx,cy,Rmax+5-P.flw,P.flh,P.v1,P.flw),{h:P.flh}));
 
   // base pattern reaches almost to the outline; wall bonds to these same loops
   const fillInset=Math.max(1.1*w, P.wvRim*w+0.4*w);
@@ -745,8 +748,8 @@ function buildWeave(P){
     const seam=j*2.399963;
     for(let i=0;i<=n;i++){
       const a=seam+TAU*i/n;
-      const rb=Math.max(5,shape(a-tw)-(0.5+ (Math.max(1,P.wvRim)-1)*0.5)*w + flare);
-      const r=rb+P.wvRAmp*ramp*Math.sin(P.wvK*a+alt);
+      const rb=Math.max(1,shape(a-tw)-(0.5+ (Math.max(1,P.wvRim)-1)*0.5)*w + flare);   // same floor as base loops
+      const r=Math.max(0.3,rb+P.wvRAmp*ramp*Math.sin(P.wvK*a+alt));
       const zz=Math.max(baseTop+0.4, z+P.wvZAmp*ramp*Math.sin(P.wvK*a+alt+Math.PI/2));
       pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a),zz]);
     }
@@ -796,14 +799,19 @@ function buildVase(P){
   let bMax=0,bMin=1e9;
   for(let k=0;k<180;k++){const r=rAt(TAU*k/180,0);if(r>bMax)bMax=r;if(r<bMin)bMin=r;}
 
-  // skirt
-  paths.push(circlePath(cx,cy,bMax+5,P.flh,P.v1,P.flw));
-  paths.push(circlePath(cx,cy,bMax+5-P.flw,P.flh,P.v1,P.flw));
+  // skirt (elliptical when Y≠X, matching the sy-scaled wall)
+  const skirt=off=>{
+    const rx=bMax+off, ry=bMax*sy+off;
+    const n=Math.max(120,Math.ceil(TAU*Math.max(rx,ry)/0.35)), pts=[];
+    for(let i=0;i<=n;i++){const a=TAU*i/n;pts.push([cx+rx*Math.cos(a),cy+ry*Math.sin(a),P.flh]);}
+    return {pts,v:P.v1,w:P.flw,h:P.flh};
+  };
+  paths.push(skirt(5)); paths.push(skirt(5-P.flw));
 
   const shapeLoop=(offIn,z,v,w)=>{ // loop following bottom cross-section, inset offIn
     const n=Math.max(120,Math.ceil(TAU*bMax/0.35)), pts=[];
     for(let i=0;i<=n;i++){const a=TAU*i/n, r=Math.max(0.5,rAt(a,0)-offIn);
-      pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a),z]);}
+      pts.push([cx+r*Math.cos(a),cy+r*sy*Math.sin(a),z]);}
     return {pts,v,w};
   };
 
@@ -819,7 +827,7 @@ function buildVase(P){
         const n=Math.max(40,Math.ceil(TAU*r/0.4)), pts=[];
         const seam=i*0.4+(r/step)*0.15;
         for(let k=0;k<=n;k++){const a=seam+TAU*k/n, rr=Math.min(r,rAt(a,0)-2.2*w);
-          pts.push([cx+rr*Math.cos(a),cy+rr*Math.sin(a),z]);}
+          pts.push([cx+rr*Math.cos(a),cy+rr*sy*Math.sin(a),z]);}
         paths.push({pts,v,w,h});
       }
     }
@@ -830,7 +838,7 @@ function buildVase(P){
       for(let k=0;k<=n;k++){
         const th=turns*TAU*k/n + i*0.5, u=1-k/n;
         const r=Math.max(0.4,u*(rAt(th,0)-2.2*w));
-        pts.push([cx+r*Math.cos(th),cy+r*Math.sin(th),z]);
+        pts.push([cx+r*Math.cos(th),cy+r*sy*Math.sin(th),z]);
         if(r<=0.45)break;
       }
       paths.push({pts,v,w,h});
@@ -842,8 +850,8 @@ function buildVase(P){
       for(let y=-Rl+sp/2;y<Rl;y+=sp){
         const x=Math.sqrt(Math.max(0,Rl*Rl-y*y));
         const a=[-x*dir,y],b=[x*dir,y];
-        pts.push([cx+a[0]*ca-a[1]*sa,cy+a[0]*sa+a[1]*ca,z]);
-        pts.push([cx+b[0]*ca-b[1]*sa,cy+b[0]*sa+b[1]*ca,z]);
+        pts.push([cx+a[0]*ca-a[1]*sa,cy+(a[0]*sa+a[1]*ca)*sy,z]);
+        pts.push([cx+b[0]*ca-b[1]*sa,cy+(b[0]*sa+b[1]*ca)*sy,z]);
         dir=-dir;
       }
       if(pts.length>1)paths.push({pts,v,w,h});
@@ -853,12 +861,15 @@ function buildVase(P){
       const loops=Math.max(2,Math.round(P.fRingT/w));
       for(let k=0;k<loops;k++)
         paths.push(Object.assign(circlePath(cx,cy,rIn+w/2+k*w*0.95,z,v,w),{h}));
-      // spokes
-      const rOut=bMin-2*w, r1=rIn+loops*w;
+      // spokes (ring stays circular for the E27 socket; spokes reach the sy-scaled wall)
+      const bnd=phi=>{const al=Math.atan2(Math.sin(phi),sy*Math.cos(phi));
+        const rr=rAt(al,0);return Math.hypot(rr*Math.cos(al),sy*rr*Math.sin(al));};
+      const r1=rIn+loops*w;
       const m=Math.max(1,Math.round(P.fSpokeW/w));
       for(let sK=0;sK<P.fSpokes;sK++){
         const a=TAU*sK/P.fSpokes + i*0.3;
         const ux=Math.cos(a),uy=Math.sin(a),px=-uy,py=ux;
+        const rOut=Math.max(r1+w,bnd(a)-2*w);
         for(let j=0;j<m;j++){
           const o=(j-(m-1)/2)*w*0.95;
           const inv=j%2;
@@ -882,16 +893,17 @@ function buildVase(P){
   const nSeg=Math.max(140,Math.ceil(perim0/0.4));
 
   const vWallEff=P.stOn?Math.min(P.vWall,25):P.vWall;
-  const emit=(pts,wpts,v,anyW)=>{
+  const emit=(pts,wpts,v,anyW,extra)=>{
     const p={pts,v,w:P.lw};
     if(anyW)p.wpts=wpts;
+    if(extra)Object.assign(p,extra);
     paths.push(p);
   };
 
   if(P.vSpiral){
     // seal loops
     const z0=zBase+P.lh;
-    paths.push(shapeLoop(P.lw/2,z0,P.vWall,P.lw));
+    paths.push(Object.assign(shapeLoop(P.lw/2,z0,vWallEff,P.lw),nF===0?{h:P.flh,w:P.flw}:{}));
     const total=wallLayers*nSeg, pts=[], wpts=[];
     let anyW=false, sArc=0;
     let prevA=0, prevR=rAt(0,0);
@@ -916,6 +928,7 @@ function buildVase(P){
           if(P.stFlow>0){wq=P.lw*(1-P.stFlow*bump);anyW=true;}
         }
       }
+      if(r<0.3)r=0.3;
       pts.push([cx+r*Math.cos(a),cy+r*sy*Math.sin(a),z]);
       wpts.push(wq);
     }
@@ -942,10 +955,11 @@ function buildVase(P){
             if(P.stFlow>0){wq=P.lw*(1-P.stFlow*bump);anyW=true;}
           }
         }
+        if(r<0.3)r=0.3;
         pts.push([cx+r*Math.cos(a),cy+r*sy*Math.sin(a),z]);
         wpts.push(wq);
       }
-      emit(pts,wpts,vWallEff,anyW);
+      emit(pts,wpts,vWallEff,anyW,(nF===0&&j===0)?{h:P.flh,w:P.flw}:null);
     }
   }
   return paths;
@@ -1016,6 +1030,14 @@ function readParams(){
   P.wvBase=$('wvBase').value;
   P.pPat=$('pPat').value; P.fFill=$('fFill').value;
   P.vSides=vSides;
+  /* guard rails: blank/zero typed values must never yield NaN, F0 or infinite loops */
+  P.lh=Math.max(P.lh,0.02); P.flh=Math.max(P.flh,0.02);
+  P.lw=Math.max(P.lw,0.05); P.flw=Math.max(P.flw,0.05);
+  P.wvStrand=Math.max(P.wvStrand,0.05); P.strandW=Math.max(P.strandW,0.05);
+  P.vLenX=Math.max(P.vLenX,1); P.vWidY=Math.max(P.vWidY,0.5); P.wvLen=Math.max(P.wvLen,1);
+  P.dia=Math.max(P.dia,1); P.ringD=Math.max(P.ringD,1);
+  P.stSpace=Math.max(P.stSpace,0.2); P.flow=Math.max(P.flow,0);
+  P.v1=Math.max(P.v1,1); P.vBase=Math.max(P.vBase,1); P.vWall=Math.max(P.vWall,1); P.vT=Math.max(P.vT,1);
   return P;
 }
 
@@ -1028,9 +1050,12 @@ function toGcode(paths,P){
   let cur=null,totalE=0,extLen=0,trvLen=0,fanOn=false,lastZ=-1;
   const f3=x=>x.toFixed(3), f5=x=>x.toFixed(5);
   const fanS=Math.round(255*Math.max(0,Math.min(100,P.fanPct||100))/100);
+  const fanZ=P.flh+(P.fanL-1)*P.lh-1e-6;   // layer n starts at flh+(n-1)*lh
+  const capV=p=>p.w>=0.6?Math.min(p.v,25):p.v;   // fat strands sag at speed
+  let zTop=0; for(const p of paths)for(const q of p.pts)if(q[2]>zTop)zTop=q[2];
   for(const p of paths){
     const s=p.pts[0], hgt=p.h||P.lh;
-    if(!fanOn && s[2]>P.lh*P.fanL){out.push('M106 S'+fanS);fanOn=true;}
+    if(!fanOn && s[2]>fanZ){out.push('M106 S'+fanS);fanOn=true;}
     if(s[2]!==lastZ){out.push(`;Z ${f3(s[2])}`);lastZ=s[2];}
     if(cur){
       const d=Math.hypot(s[0]-cur[0],s[1]-cur[1],s[2]-cur[2]);
@@ -1043,22 +1068,28 @@ function toGcode(paths,P){
         trvLen+=d;
       }else out.push(`G0 X${f3(s[0])} Y${f3(s[1])} Z${f3(s[2])} F${Math.round(P.vT*60)}`);
     }else out.push(`G0 X${f3(s[0])} Y${f3(s[1])} Z${f3(s[2])} F${Math.round(P.vT*60)}`);
-    const F=Math.round(p.v*60);
+    const F=Math.round(capV(p)*60);
+    let needF=true;
     for(let i=1;i<p.pts.length;i++){
       const a=p.pts[i-1],b=p.pts[i];
       const d=Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]);
       if(d<1e-4)continue;
       const w=p.wpts?(p.wpts[i-1]+p.wpts[i])/2:p.w;
       const e=d*ePerMM(w,hgt); totalE+=e; extLen+=d;
-      out.push(`G1 X${f3(b[0])} Y${f3(b[1])} Z${f3(b[2])} E${f5(e)}${i===1?' F'+F:''}`);
+      out.push(`G1 X${f3(b[0])} Y${f3(b[1])} Z${f3(b[2])} E${f5(e)}${needF?' F'+F:''}`);
+      needF=false;
     }
     cur=p.pts[p.pts.length-1];
   }
-  out.push($('gEnd').value);
+  out.push($('gEnd').value
+    .replaceAll('{ZAFTER}',f3(Math.min(zTop+0.5,250)))
+    .replaceAll('{ZPARK2}',f3(Math.min(zTop+98,248)))
+    .replaceAll('{ZPARK}',f3(Math.min(zTop+100,250)))
+    .replaceAll('{BED}',P.tB).replaceAll('{NOZ}',P.tN));
   const vol=totalE*FIL_A, g=vol*1.24/1000;
   const tSec=paths.reduce((t,p)=>{
     let L=0;for(let i=1;i<p.pts.length;i++){const a=p.pts[i-1],b=p.pts[i];L+=Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]);}
-    return t+L/p.v;},0)+trvLen/P.vT;
+    return t+L/capV(p);},0)+trvLen/P.vT;
   return {text:out.join('\n')+'\n',stats:{extLen,fil:totalE,g,tMin:tSec*1.12/60,paths:paths.length}};
 }
 
@@ -1136,6 +1167,10 @@ function loadMachineGcode(model){
     $('gStart').value=P1S_START+
       '\n; --- Pattern.wly temps ---\nM104 S{NOZ}\nM109 S{NOZ}\nM140 S{BED}\nG92 E0\nM83';
     $('gEnd').value=P1S_END;
+  }else{
+    // other machines must not inherit the Bambu-proprietary block
+    $('gStart').value=GEN_START;
+    $('gEnd').value=GEN_END;
   }
 }
 $('printer').onchange=()=>{const v=$('printer').value; const p=PRINTERS[v]; if(p)$('cx').value=p.cx;
