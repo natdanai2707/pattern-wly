@@ -24,6 +24,9 @@ header p{color:var(--dim);font-size:11px}
 .grp{margin-top:14px}
 .grp>h2{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);
   border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:8px}
+.grp>h2 .n{display:inline-block;min-width:16px;height:16px;line-height:16px;text-align:center;
+  background:var(--accent);color:#181307;border-radius:50%;font-size:10px;font-weight:700;
+  margin-right:8px;letter-spacing:0}
 .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}
 .row label{color:var(--dim);font-size:12.5px;flex:1}
 .row input[type=number],.row select{width:78px;background:var(--panel2);border:1px solid var(--line);
@@ -143,18 +146,7 @@ button:disabled{opacity:.4;cursor:default}
     </div>
 
     <!-- ============ VASE ============ -->
-    <div class="grp" data-mode="vase"><h2>Vase shape</h2>
-      <div class="row"><label>Length X (mm)</label><input type="number" id="vLenX" value="70" step="5"></div>
-      <div class="row"><label>Width Y (mm)</label><input type="number" id="vWidY" value="70" step="5"></div>
-      <div class="row"><label>Height (mm)</label><input type="number" id="vH" value="60" step="5"></div>
-      <div class="row"><label>Sides (0 = round)</label></div>
-      <div class="seg" id="sidesSeg"></div>
-      <div class="row"><label>Corner radius (mm)</label><input type="number" id="vCorner" value="4" step="1"></div>
-      <div class="row"><label>Twist (°/mm of Z)</label><input type="number" id="vTwist" value="0" step="0.5"></div>
-      <div class="row"><label>Spiralize (vase mode)</label><input type="checkbox" id="vSpiral" checked></div>
-    </div>
-
-    <div class="grp" data-mode="vase weave"><h2>Profile (radius vs Z)</h2>
+    <div class="grp" data-mode="vase weave"><h2><span class="n">1</span>Profile editor</h2>
       <div class="mini" style="margin:0 0 6px">
         <button id="profDrawBtn" class="on">Draw</button>
         <button id="profPenBtn">Pen</button>
@@ -165,6 +157,14 @@ button:disabled{opacity:.4;cursor:default}
       <canvas id="profCv"></canvas>
       <div class="note" id="profHint">Draw: sketch the silhouette in one stroke — it snaps to a clean curve.</div>
       <div class="row"><label>Profile smoothing</label><input type="number" id="profSmooth" value="4" step="1" min="0" max="10"></div>
+      <div data-mode="vase">
+        <div class="row"><label>Height (mm)</label><input type="number" id="vH" value="60" step="5"></div>
+        <div class="row"><label>Max diameter X (mm)</label><input type="number" id="vLenX" value="70" step="5"></div>
+        <div class="row"><label>Max diameter Y (mm)</label><input type="number" id="vWidY" value="70" step="5"></div>
+        <div class="row"><label>Sides (0 = revolve)</label></div>
+        <div class="seg" id="sidesSeg"></div>
+        <div class="row"><label>Corner radius (mm)</label><input type="number" id="vCorner" value="4" step="1"></div>
+      </div>
       <div class="mini">
         <button id="profStraight">Straight</button>
         <button id="profCurvy">Curvy</button>
@@ -172,7 +172,7 @@ button:disabled{opacity:.4;cursor:default}
       </div>
     </div>
 
-    <div class="grp" data-mode="vase"><h2>Pattern</h2>
+    <div class="grp" data-mode="vase"><h2><span class="n">2</span>Pattern</h2>
       <div class="row"><label>Type</label>
         <select id="pPat">
           <option value="smooth">Smooth</option>
@@ -192,9 +192,11 @@ button:disabled{opacity:.4;cursor:default}
       <div class="row"><label>Pattern offset (°)</label><input type="number" id="pOff" value="0" step="5"></div>
       <div class="row"><label>Fade in (mm)</label><input type="number" id="pFadeIn" value="8" step="2"></div>
       <div class="row"><label>Fade out (mm)</label><input type="number" id="pFadeOut" value="0" step="2"></div>
+      <div class="row"><label>Twist (°/mm of Z)</label><input type="number" id="vTwist" value="0" step="0.5"></div>
+      <div class="row"><label>Spiralize (vase mode)</label><input type="checkbox" id="vSpiral" checked></div>
     </div>
 
-    <div class="grp" data-mode="vase"><h2>Surface texture · stitches</h2>
+    <div class="grp" data-mode="vase"><h2><span class="n">3</span>Surface texture · stitches</h2>
       <div class="row"><label>Enable stitches</label><input type="checkbox" id="stOn" checked></div>
       <div class="row"><label>Depth (mm)</label><input type="number" id="stDepth" value="0.7" step="0.1"></div>
       <div class="row"><label>Spacing (mm)</label><input type="number" id="stSpace" value="2.6" step="0.5"></div>
@@ -204,7 +206,7 @@ button:disabled{opacity:.4;cursor:default}
       <div class="row"><label>Flow modulation (0–1)</label><input type="number" id="stFlow" value="0" step="0.1" min="0" max="1"></div>
     </div>
 
-    <div class="grp" data-mode="vase"><h2>Floor</h2>
+    <div class="grp" data-mode="vase"><h2><span class="n">4</span>Floor</h2>
       <div class="row"><label>Fill</label>
         <select id="fFill">
           <option value="rings">Concentric rings</option>
@@ -263,7 +265,7 @@ button:disabled{opacity:.4;cursor:default}
     </div>
 
     <!-- ============ PRINTER ============ -->
-    <div class="grp"><h2>Printer</h2>
+    <div class="grp"><h2><span class="n">5</span>Printer</h2>
       <div class="row"><label>Model</label>
         <select id="printer">
           <option value="p1s" selected>Bambu P1S (256³)</option>
