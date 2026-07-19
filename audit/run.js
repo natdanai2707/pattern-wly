@@ -196,13 +196,15 @@ console.log('== T4: speed caps ==');
   app.set('vWall', 120); app.set('stOn', true);
   ({ P, paths } = pathsOf(app, 'vase'));
   const wallsV = paths.filter(p => p.wpts || (p.pts[0][2] > P.flh + (P.fLayers - 1) * P.lh + 1e-6 && p.pts.length > 200));
-  ok(wallsV.length > 0 && wallsV.every(p => p.v <= 25 + 1e-9), `vase stitched walls ≤25 (max ${Math.max(...wallsV.map(p => p.v))})`);
+  const vCapVol = Math.min(P.vWall, 12 / (P.lw * P.lh)); // OGcode parity: volumetric ceiling, not flat 25
+  ok(wallsV.length > 0 && wallsV.every(p => p.v <= vCapVol + 1e-9), `vase stitched walls ≤min(vWall, 12mm3/s) (max ${Math.max(...wallsV.map(p => p.v))} cap ${vCapVol.toFixed(1)})`);
   // non-spiral stitched too
   app = boot(HTML);
   app.set('vWall', 120); app.set('stOn', true); app.set('vSpiral', false);
   ({ P, paths } = pathsOf(app, 'vase'));
   const wallsNS = paths.filter(p => p.pts[0][2] > P.flh + (P.fLayers - 1) * P.lh + 1e-6 && p.pts.length > 200);
-  ok(wallsNS.every(p => p.v <= 25 + 1e-9), `vase stitched non-spiral walls ≤25 (max ${Math.max(...wallsNS.map(p => p.v))})`);
+  const vCapNS = Math.min(P.vWall, 12 / (P.lw * P.lh));
+  ok(wallsNS.every(p => p.v <= vCapNS + 1e-9), `vase stitched non-spiral walls ≤min(vWall, 12mm3/s) (max ${Math.max(...wallsNS.map(p => p.v))})`);
 }
 
 /* ============== task 5: gcode structure ============== */
@@ -220,8 +222,8 @@ console.log('== T5: gcode structure ==');
   const iFirstPrint = lines.findIndex((l, i) => i > 0 && /^G1 X[\d.]+ Y[\d.]+ Z[\d.]+ E/.test(l));
   ok(iM83 >= 0 && iM83 < iFirstPrint, `M83 (@${iM83}) before first print move (@${iFirstPrint})`);
   const fanS = Math.round(255 * P.fanPct / 100);
-  const iFan = lines.findIndex((l, i) => i > iM83 && l === 'M106 S' + fanS);
-  ok(iFan > 0, `fan M106 S${fanS} present after start`);
+  const iFan = lines.findIndex((l, i) => i > iM83 && l.startsWith('M106 P1 S' + fanS));
+  ok(iFan > 0, `fan M106 P1 S${fanS} present after start`);
   if (iFan > 0) {
     // fan is emitted just before the triggering layer's ;Z comment → search forward
     let zAt = null;
@@ -240,7 +242,7 @@ console.log('== T5: gcode structure ==');
   const r2 = pathsOf(app2, 'vase');
   const t2 = app2.X.toGcode(r2.paths, r2.P).text;
   const l2 = t2.split('\n');
-  const iFan2 = l2.findIndex((l, i) => i > l2.lastIndexOf('M83') && l === 'M106 S255');
+  const iFan2 = l2.findIndex((l, i) => i > l2.lastIndexOf('M83') && l.startsWith('M106 P1 S255'));
   let zAt2 = null; for (let i = iFan2; i < l2.length; i++) { const m = l2[i].match(/^;Z ([\d.]+)/); if (m) { zAt2 = parseFloat(m[1]); break; } }
   const layer2 = Math.round((zAt2 - 0.1) / 0.4) + 1;
   ok(layer2 === 2, `fan with flh=0.1 lh=0.4 fires at layer ${layer2} (want 2)`);
