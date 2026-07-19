@@ -123,6 +123,7 @@ function boot(htmlPath, { instrumentGrowth = false } = {}) {
   vm.createContext(sandbox);
 
   const tail = `\n;globalThis.__X={buildTray,buildKnit,buildWeave,buildVase,toGcode,readParams,generate,SLIDER_RANGE,ALL_IDS,collectSettings,applySettings,annulusGrowth,profileAt,initFromHash,downloadFile,circlePath,
+  profApplyStroke:(typeof profApplyStroke!=='undefined')?profApplyStroke:null,
   getProf:()=>profPts, setProf:p=>{profPts=p}, setSides:s=>{vSides=s}, getSides:()=>vSides, lastG:()=>lastG};`;
   vm.runInContext(src + tail, sandbox, { filename: 'patternwly.js' });
 

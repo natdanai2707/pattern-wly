@@ -40,11 +40,13 @@ textarea{width:100%;height:96px;background:var(--panel2);border:1px solid var(--
 .seg button{flex:1;min-width:34px;background:var(--panel2);color:var(--dim);border:1px solid var(--line);
   border-radius:4px;padding:6px 0;font:12px var(--mono);cursor:pointer}
 .seg button.on{background:#3a2c14;color:var(--accent);border-color:var(--accent)}
-#profCv{width:100%;height:220px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;
+#profCv{width:100%;height:300px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;
   touch-action:none;cursor:crosshair;display:block}
+#profCv.big{height:480px}
 .mini{display:flex;gap:6px;margin-top:6px}
 .mini button{flex:1;background:var(--panel2);color:var(--dim);border:1px solid var(--line);
   border-radius:4px;padding:6px;font-size:11.5px;cursor:pointer}
+.mini button.on{background:#3a2c14;color:var(--accent);border-color:var(--accent)}
 .note{font-size:11px;color:var(--dim);margin:4px 0;line-height:1.35}
 main{flex:1;position:relative;min-width:0}
 #cv{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
@@ -153,8 +155,16 @@ button:disabled{opacity:.4;cursor:default}
     </div>
 
     <div class="grp" data-mode="vase weave"><h2>Profile (radius vs Z)</h2>
+      <div class="mini" style="margin:0 0 6px">
+        <button id="profDrawBtn" class="on">Draw</button>
+        <button id="profPenBtn">Pen</button>
+        <button id="profUndo" title="Undo">&#8630;</button>
+        <button id="profClear" title="Clear">&#10005;</button>
+        <button id="profBig">Enlarge</button>
+      </div>
       <canvas id="profCv"></canvas>
-      <div class="note">Drag points · double-tap curve to add · double-tap a point to remove</div>
+      <div class="note" id="profHint">Draw: sketch the silhouette in one stroke — it snaps to a clean curve.</div>
+      <div class="row"><label>Profile smoothing</label><input type="number" id="profSmooth" value="4" step="1" min="0" max="10"></div>
       <div class="mini">
         <button id="profStraight">Straight</button>
         <button id="profCurvy">Curvy</button>
@@ -581,27 +591,99 @@ function profileAt(t){
   const f=(2*u3-3*u2+1)*p1.f+(u3-2*u2+u)*m1+(-2*u3+3*u2)*p2.f+(u3-u2)*m2;
   return Math.max(0.15,Math.min(1.2,f));
 }
+/* profile editor: Draw (freehand silhouette) + Pen (drag points) with undo/smoothing */
+let profMode='draw', profStroke=null, profRawStroke=null;
+const profUndoStack=[];
+function profPushUndo(){
+  profUndoStack.push(profPts.map(p=>({t:p.t,f:p.f})));
+  if(profUndoStack.length>24)profUndoStack.shift();
+}
+function profSmoothPasses(arr,n){
+  let a=arr.slice();
+  for(let p=0;p<n;p++){
+    const b=a.slice();
+    for(let i=1;i<a.length-1;i++)b[i]=(a[i-1]+2*a[i]+a[i+1])/4;
+    a=b;
+  }
+  return a;
+}
+/* raw stroke [{t,f}] -> clean normalized profPts */
+function profApplyStroke(raw){
+  if(!raw||raw.length<3)return false;
+  // bin by t (stroke may wiggle back), stretch its t-extent to full 0..1
+  let tMin=1,tMax=0;
+  for(const q of raw){if(q.t<tMin)tMin=q.t;if(q.t>tMax)tMax=q.t;}
+  if(tMax-tMin<0.08)return false;
+  const N=33, sum=new Float64Array(N), cnt=new Float64Array(N);
+  for(const q of raw){
+    const u=(q.t-tMin)/(tMax-tMin);
+    const b=Math.max(0,Math.min(N-1,Math.round(u*(N-1))));
+    sum[b]+=q.f; cnt[b]++;
+  }
+  let fs=new Array(N), last=null;
+  for(let i=0;i<N;i++){ if(cnt[i]){fs[i]=sum[i]/cnt[i]; last=fs[i];} else fs[i]=null; }
+  // fill gaps by linear interpolation between known bins
+  let i0=fs.findIndex(v=>v!==null); if(i0<0)return false;
+  for(let i=0;i<i0;i++)fs[i]=fs[i0];
+  for(let i=i0+1;i<N;i++){
+    if(fs[i]!==null){
+      for(let k=i0+1;k<i;k++)fs[k]=fs[i0]+(fs[i]-fs[i0])*(k-i0)/(i-i0);
+      i0=i;
+    }
+  }
+  for(let i=i0+1;i<N;i++)fs[i]=fs[i0];
+  fs=profSmoothPasses(fs,Math.max(0,Math.round(num('profSmooth'))));
+  // normalize: widest point of the drawn curve = 1.0, so Length X / Width Y are true max diameters
+  let mx=0; for(const v of fs)if(v>mx)mx=v;
+  const sc=mx>0.05?1/mx:1;
+  profPts=fs.map((v,i)=>({t:i/(N-1), f:Math.max(0.15,Math.min(1.2,v*sc))}));
+  return true;
+}
+function profReSmooth(){
+  if(profRawStroke && profApplyStroke(profRawStroke)){drawProfile();liveGen();}
+}
 function drawProfile(){
   const cv=$('profCv'), dpr=window.devicePixelRatio||1;
   const W=cv.clientWidth, H=cv.clientHeight;
-  if(cv.width!==W*dpr){cv.width=W*dpr;cv.height=H*dpr;}
+  if(cv.width!==W*dpr||cv.height!==H*dpr){cv.width=W*dpr;cv.height=H*dpr;}
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
   g.clearRect(0,0,W,H);
   const pad=14, iw=W-2*pad, ih=H-2*pad;
   const X=f=>pad+f*iw, Y=t=>H-pad-t*ih;
+  g.strokeStyle='#262b31';
+  for(let i=0;i<=6;i++){g.beginPath();g.moveTo(X(0),pad+ih*i/6);g.lineTo(X(1.2),pad+ih*i/6);g.stroke();}
   g.strokeStyle='#2e343b';
-  for(let i=0;i<=4;i++){g.beginPath();g.moveTo(X(i/4),pad);g.lineTo(X(i/4),H-pad);g.stroke();}
-  g.fillStyle='#5b636b';g.font='10px monospace';
-  g.fillText('Z=0',W-32,H-4); g.fillText('Z=max',W-42,10);
+  for(let i=0;i<=4;i++){g.beginPath();g.moveTo(X(i*0.3),pad);g.lineTo(X(i*0.3),H-pad);g.stroke();}
+  g.fillStyle='#5b636b';g.font='9px monospace';
+  g.fillText('Z = 0',W-40,H-4); g.fillText('Z = MAX',W-52,10);
+  g.save();g.translate(8,H/2);g.rotate(-Math.PI/2);g.textAlign='center';g.fillText('AXIS',0,0);g.restore();
+  // axis line
+  g.strokeStyle='#3a424b';g.beginPath();g.moveTo(X(0),pad);g.lineTo(X(0),H-pad);g.stroke();
   g.strokeStyle='#e8a33d'; g.lineWidth=2; g.beginPath();
-  for(let k=0;k<=80;k++){const t=k/80,f=profileAt(t);
+  for(let k=0;k<=96;k++){const t=k/96,f=profileAt(t);
     k?g.lineTo(X(f),Y(t)):g.moveTo(X(f),Y(t));}
   g.stroke();
-  for(const p of profPts){
-    g.beginPath();g.arc(X(p.f),Y(p.t),5,0,TAU);
-    g.fillStyle='#e8a33d';g.fill();
-    g.strokeStyle='#15171a';g.stroke();
+  if(profMode==='pen'){
+    for(const p of profPts){
+      g.beginPath();g.arc(X(p.f),Y(p.t),5,0,TAU);
+      g.fillStyle='#e8a33d';g.fill();
+      g.strokeStyle='#15171a';g.stroke();
+    }
   }
+  if(profStroke&&profStroke.length>1){  // live raw stroke overlay while drawing
+    g.strokeStyle='rgba(79,195,247,0.85)';g.lineWidth=1.5;g.beginPath();
+    profStroke.forEach((q,i)=>{i?g.lineTo(X(q.f),Y(q.t)):g.moveTo(X(q.f),Y(q.t));});
+    g.stroke();
+  }
+}
+function profSetMode(m){
+  profMode=m;
+  $('profDrawBtn').classList.toggle('on',m==='draw');
+  $('profPenBtn').classList.toggle('on',m==='pen');
+  $('profHint').textContent=m==='draw'
+    ?'Draw: sketch the silhouette in one stroke — it snaps to a clean curve.'
+    :'Pen: drag points · double-tap curve to add · double-tap a point to remove.';
+  drawProfile();
 }
 function profSetup(){
   const cv=$('profCv');
@@ -622,16 +704,26 @@ function profSetup(){
     return -1;
   };
   cv.addEventListener('pointerdown',e=>{
+    if(profMode==='draw'){
+      profPushUndo();
+      profStroke=[pos(e)];
+      cv.setPointerCapture(e.pointerId);
+      return;
+    }
     const i=hit(e), now=Date.now(), dbl=now-lastTap<350; lastTap=now;
     if(dbl){
-      if(i>0&&i<profPts.length-1){profPts.splice(i,1);drawProfile();return;}
-      if(i<0){const q=pos(e);
+      if(i>0&&i<profPts.length-1){profPushUndo();profPts.splice(i,1);drawProfile();liveGen();return;}
+      if(i<0){const q=pos(e);profPushUndo();
         profPts.push({t:q.t,f:q.f});
-        profPts.sort((a,b)=>a.t-b.t);drawProfile();return;}
+        profPts.sort((a,b)=>a.t-b.t);drawProfile();liveGen();return;}
     }
-    if(i>=0){drag=i;cv.setPointerCapture(e.pointerId);}
+    if(i>=0){profPushUndo();drag=i;cv.setPointerCapture(e.pointerId);}
   });
   cv.addEventListener('pointermove',e=>{
+    if(profMode==='draw'){
+      if(profStroke){profStroke.push(pos(e));drawProfile();}
+      return;
+    }
     if(drag<0)return;
     const q=pos(e), p=profPts[drag];
     p.f=q.f;
@@ -640,10 +732,31 @@ function profSetup(){
     }
     drawProfile();
   });
-  cv.addEventListener('pointerup',()=>{drag=-1;});
-  $('profReset').onclick=()=>{profPts=[{t:0,f:0.85},{t:0.35,f:0.7},{t:0.7,f:1.0},{t:1,f:0.8}];drawProfile();};
-  $('profStraight').onclick=()=>{profPts=[{t:0,f:0.9},{t:1,f:0.9}];drawProfile();};
-  $('profCurvy').onclick=()=>{profPts=[{t:0,f:0.72},{t:0.25,f:0.95},{t:0.55,f:0.6},{t:0.8,f:1.0},{t:1,f:0.65}];drawProfile();};
+  cv.addEventListener('pointerup',()=>{
+    if(profMode==='draw'&&profStroke){
+      const raw=profStroke; profStroke=null;
+      if(profApplyStroke(raw)){profRawStroke=raw;drawProfile();liveGen();}
+      else {profUndoStack.pop();drawProfile();}   // stroke too small: discard
+      return;
+    }
+    if(drag>=0)liveGen();
+    drag=-1;
+  });
+  const preset=pts=>{profPushUndo();profRawStroke=null;profPts=pts;drawProfile();liveGen();};
+  $('profReset').onclick=()=>preset([{t:0,f:0.85},{t:0.35,f:0.7},{t:0.7,f:1.0},{t:1,f:0.8}]);
+  $('profStraight').onclick=()=>preset([{t:0,f:0.9},{t:1,f:0.9}]);
+  $('profCurvy').onclick=()=>preset([{t:0,f:0.72},{t:0.25,f:0.95},{t:0.55,f:0.6},{t:0.8,f:1.0},{t:1,f:0.65}]);
+  $('profDrawBtn').onclick=()=>profSetMode('draw');
+  $('profPenBtn').onclick=()=>profSetMode('pen');
+  $('profClear').onclick=()=>preset([{t:0,f:0.9},{t:1,f:0.9}]);
+  $('profUndo').onclick=()=>{
+    if(profUndoStack.length){profPts=profUndoStack.pop();profRawStroke=null;drawProfile();liveGen();}
+  };
+  $('profBig').onclick=()=>{
+    const big=cv.classList.toggle('big');
+    $('profBig').textContent=big?'Shrink':'Enlarge';
+    drawProfile();
+  };
 }
 
 
@@ -976,6 +1089,7 @@ function buildVase(P){
 /* ===== live sliders: wrap every number input with a synced range ===== */
 const SLIDER_RANGE={
   // id: [min,max,step]  (fallbacks derived from step attribute otherwise)
+  profSmooth:[0,10,1],
   wvLen:[40,220,2], wvTri:[0,40,1], wvEgg:[0,40,1], wvSides:[0,12,1], wvCornerR:[0,40,1],
   wvRot:[0,360,5], wvRim:[0,5,1], wvPitch:[1.2,8,0.1], wvLambda:[1,8,0.1], wvStrand:[0.4,1.6,0.05],
   wvLayers:[1,6,1], wvCross:[0,180,5], wvSolid:[0,10,1], wvGap:[1.5,8,0.1], wvSeed:[1,999,1],
@@ -1239,7 +1353,7 @@ const ALL_IDS=['mode','dia','baseLayers','pattern','holeD','gapS','strandW','see
 'kLayers','brim','vLenX','vWidY','vH','vCorner','vTwist','vSpiral','pPat','pAmp','pFreq','pFreqZ',
 'pOff','pFadeIn','pFadeOut','stOn','stDepth','stSpace','stLen','stShape','stLayerOff','stFlow',
 'fFill','fLayers','fInnerD','fRingT','fSpokes','fSpokeW','printer','mat','nozzle','lh','lw','flh',
-'flw','flow','tN','tB','v1','vBase','vWall','vT','fanPct','fanL','cx','gStart','gEnd',
+'flw','flow','tN','tB','v1','vBase','vWall','vT','fanPct','fanL','cx','gStart','gEnd','profSmooth',
 'wvLen','wvTri','wvEgg','wvRot','wvPitch','wvLambda','wvStrand','wvLayers',
 'wvWallLayers','wvK','wvZAmp','wvRAmp','wvFlare','wvCross','wvSolid','wvCurveD','wvCurveOn',
 'wvBase','wvSides','wvCornerR','wvGap','wvSeed','wvRim','wvTwistW'];
@@ -1397,6 +1511,9 @@ $('wvBase').onchange=()=>{
 };
 $('showT').onchange=generate;
 initGL(); sidesSetup(); profSetup(); buildSliders();
+/* smoothing re-applies to the last drawn stroke (number input + its synced range slider) */
+{const inp=$('profSmooth'), rng=inp.previousElementSibling;
+ [inp,rng].forEach(el=>{if(el&&el.addEventListener)el.addEventListener('input',profReSmooth);});}
 document.querySelectorAll('#ctrl select,#ctrl input[type=checkbox]').forEach(el=>{
   const prev=el.onchange;
   el.addEventListener('change',()=>{ if(prev)prev.call(el); liveGen(); });
