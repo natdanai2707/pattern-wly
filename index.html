@@ -3,1406 +3,445 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pattern.wly — With Layers toolpath studio</title>
+<title>Pattern.wly — toolpath studio by With Layers</title>
+<meta name="description" content="Lampshades, vases, woven trays and knit rings written straight to printer gcode — no CAD, no slicer. By With Layers.">
+<script>
+/* legacy customer links pointed at this file when it was the app —
+   forward any settings/share hash to the app page unchanged */
+if(/(^|[#&])(s=|share=)/.test(location.hash))
+  location.replace('app.html'+location.hash);
+</script>
 <style>
 :root{
-  --bg:#15171a; --panel:#1d2024; --panel2:#23272c; --line:#2e343b;
-  --ink:#e8e6e1; --dim:#9aa0a6; --accent:#e8a33d; --accent2:#4fc3f7;
+  --bg:#f2efe8; --ink:#17181a; --dim:#8f8e87; --line:#dcd9cf;
+  --acc:#f04a00; --dark:#101010; --dark-line:rgba(255,255,255,.055);
   --mono:ui-monospace,'Cascadia Mono','JetBrains Mono',Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif}
-#app{display:flex;height:100vh;overflow:hidden}
-aside{width:352px;min-width:310px;background:var(--panel);border-right:1px solid var(--line);
-  display:flex;flex-direction:column;overflow:hidden}
-header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:10px}
-header h1{font-size:16px;letter-spacing:.04em;font-weight:700}
-header h1 b{color:var(--accent)}
-header p{color:var(--dim);font-size:11px}
-#ctrl{flex:1;overflow-y:auto;padding:10px 16px 16px}
-.grp{margin-top:14px}
-.grp>h2{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);
-  border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:8px}
-.row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}
-.row label{color:var(--dim);font-size:12.5px;flex:1}
-.row input[type=number],.row select{width:78px;background:var(--panel2);border:1px solid var(--line);
-  color:var(--ink);border-radius:4px;padding:5px 6px;font:12px var(--mono);text-align:right}
-.row select{width:158px}
-.row input[type=range]{flex:1;min-width:70px;accent-color:var(--accent);height:3px;margin:0 2px}
-.row.slider label{flex:0 0 auto;max-width:150px}
-.row.slider .val{width:60px}
-.row input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
-input:focus,select:focus,textarea:focus{outline:1px solid var(--accent)}
-textarea{width:100%;height:96px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);
-  border-radius:4px;padding:6px;font:11px/1.4 var(--mono);resize:vertical}
-.seg{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
-.seg button{flex:1;min-width:34px;background:var(--panel2);color:var(--dim);border:1px solid var(--line);
-  border-radius:4px;padding:6px 0;font:12px var(--mono);cursor:pointer}
-.seg button.on{background:#3a2c14;color:var(--accent);border-color:var(--accent)}
-#profCv{width:100%;height:220px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;
-  touch-action:none;cursor:crosshair;display:block}
-.mini{display:flex;gap:6px;margin-top:6px}
-.mini button{flex:1;background:var(--panel2);color:var(--dim);border:1px solid var(--line);
-  border-radius:4px;padding:6px;font-size:11.5px;cursor:pointer}
-.note{font-size:11px;color:var(--dim);margin:4px 0;line-height:1.35}
-main{flex:1;position:relative;min-width:0}
-#cv{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
-#bar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;align-items:center;
-  padding:10px 14px;background:linear-gradient(transparent,rgba(21,23,26,.92) 40%)}
-button.cta{background:var(--accent);color:#181307;border:0;border-radius:5px;padding:9px 16px;
-  font-weight:700;font-size:13px;cursor:pointer;letter-spacing:.02em}
-button.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:5px;
-  padding:9px 14px;font-size:13px;cursor:pointer}
-button:disabled{opacity:.4;cursor:default}
-#stats{margin-left:auto;font:11.5px var(--mono);color:var(--dim);text-align:right;white-space:pre-line}
-#hint{position:absolute;top:10px;left:14px;font:11px var(--mono);color:#5b636b;pointer-events:none}
-.tag{position:absolute;top:10px;right:14px;font:11px var(--mono);color:var(--dim)}
-@media(max-width:760px){
-  #app{flex-direction:column}
-  aside{width:100%;min-width:0;max-height:55vh}
-  main{height:45vh}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);
+  font:16px/1.55 'Helvetica Neue',Helvetica,'Segoe UI',system-ui,-apple-system,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1280px;margin:0 auto;padding:0 32px}
+.mono{font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase}
+.kick{color:var(--acc)}
+/* ============ header ============ */
+header{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:74px}
+.logo{font-size:24px;font-weight:800;letter-spacing:-.02em}
+.logo b{color:var(--acc);font-weight:800}
+.nav .btns{display:flex;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--ink);
+  padding:12px 20px;font-family:var(--mono);font-size:11px;letter-spacing:.22em;
+  text-transform:uppercase;background:transparent;cursor:pointer;transition:background .15s,color .15s}
+.btn:hover{background:var(--ink);color:var(--bg)}
+.btn.solid{background:var(--ink);color:var(--bg)}
+.btn.solid:hover{background:var(--acc);border-color:var(--acc)}
+.btn.solid .em{color:var(--acc)}
+.btn.solid:hover .em{color:var(--bg)}
+/* ============ hero ============ */
+.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;
+  padding:88px 0 96px;min-height:78vh}
+.hero .kick{margin-bottom:26px}
+.hero h1{font-size:clamp(56px,8.4vw,118px);line-height:.95;letter-spacing:-.035em;font-weight:800}
+.hero h1 .g{color:#b3b1a8}
+.hero p.sub{max-width:560px;margin:34px 0 40px;font-size:19px;line-height:1.6;color:#3d3e40}
+.hero .note{margin-top:14px;color:var(--dim);font-family:var(--mono);font-size:11.5px;letter-spacing:.12em}
+/* viewport panel */
+.vp{position:relative;aspect-ratio:1/1.02;min-height:420px;
+  background:
+    linear-gradient(var(--line) 1px,transparent 1px),
+    linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:44px 44px}
+.vp canvas{position:absolute;inset:0;width:100%;height:100%}
+.vp .corner{position:absolute;width:22px;height:22px;border:2px solid var(--acc)}
+.vp .c1{top:-2px;left:-2px;border-right:0;border-bottom:0}
+.vp .c2{top:-2px;right:-2px;border-left:0;border-bottom:0}
+.vp .c3{bottom:-2px;left:-2px;border-right:0;border-top:0}
+.vp .c4{bottom:-2px;right:-2px;border-left:0;border-top:0}
+.vp .tag{position:absolute;font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;color:var(--dim);text-transform:uppercase}
+.vp .t1{top:14px;left:18px}
+.vp .t2{bottom:14px;left:18px}
+.vp .t3{bottom:14px;right:18px;color:var(--acc)}
+.vp .t3::before{content:'●';margin-right:8px;animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.25}}
+/* ============ chip band ============ */
+.chips{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:22px 0;overflow-x:auto}
+.chips .row{display:flex;gap:14px;justify-content:center;min-width:max-content;padding:0 32px}
+.chip{border:1px solid var(--line);background:#fbfaf6;padding:12px 22px;white-space:nowrap;
+  font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:#4d4e50;text-transform:uppercase}
+/* ============ gallery ============ */
+.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--line)}
+.tile{position:relative;aspect-ratio:1/1;overflow:hidden}
+.tile canvas{width:100%;height:100%;display:block}
+.tile .lb{position:absolute;left:14px;bottom:12px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.24em;text-transform:uppercase;color:#8b8b85;mix-blend-mode:difference;color:#9a9a94}
+/* ============ dark workflow ============ */
+.darksec{background:var(--dark);color:#efeee9;
+  background-image:
+    linear-gradient(var(--dark-line) 1px,transparent 1px),
+    linear-gradient(90deg,var(--dark-line) 1px,transparent 1px);
+  background-size:56px 56px;padding:110px 0 90px}
+.darksec h2,.lightsec h2,.faqsec h2{font-size:clamp(42px,5.6vw,76px);line-height:1.02;
+  letter-spacing:-.03em;font-weight:800;margin:18px 0 70px}
+.step{display:grid;grid-template-columns:130px 90px 1fr 1.2fr;gap:26px;align-items:center;
+  padding:44px 0;border-bottom:1px solid rgba(255,255,255,.14)}
+.step:last-child{border-bottom:0}
+.step .num{font-size:56px;font-weight:800;letter-spacing:-.03em}
+.step .ic{color:var(--acc)}
+.step .ic svg{width:44px;height:44px;stroke:var(--acc);fill:none;stroke-width:2}
+.step h3{font-size:26px;font-weight:700;letter-spacing:-.01em}
+.step p{color:#9b9a94;font-size:16px}
+/* ============ features ============ */
+.lightsec{padding:110px 0 80px}
+.feats{display:grid;grid-template-columns:1fr 1fr;gap:0 96px}
+.feat{display:grid;grid-template-columns:74px 1fr;gap:18px;padding:40px 0;border-bottom:1px solid var(--line)}
+.feat .num{font-size:30px;font-weight:800;color:#b9b7ae;letter-spacing:-.02em}
+.feat h3{font-size:20px;font-weight:700;margin-bottom:8px}
+.feat p{color:#5c5d5f;font-size:15px;line-height:1.6}
+.feat .tag{display:inline-block;margin-top:14px;font-family:var(--mono);font-size:10.5px;
+  letter-spacing:.26em;color:var(--acc);text-transform:uppercase}
+/* ============ faq ============ */
+.faqsec{padding:100px 0 90px;border-top:1px solid var(--line)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq summary{display:flex;justify-content:space-between;align-items:baseline;gap:24px;
+  padding:30px 0;cursor:pointer;list-style:none;font-size:24px;font-weight:700;letter-spacing:-.01em}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .q{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--acc);flex:0 0 auto}
+.faq details p{max-width:820px;color:#5c5d5f;padding:0 0 30px;font-size:16.5px;line-height:1.65}
+.faq details[open] summary{color:var(--acc)}
+/* ============ cta band + footer ============ */
+.ctaband{background:var(--dark);color:#efeee9;text-align:center;padding:110px 24px}
+.ctaband h2{font-size:clamp(40px,5.4vw,72px);font-weight:800;letter-spacing:-.03em;margin-bottom:18px}
+.ctaband p{color:#9b9a94;margin-bottom:44px}
+.ctaband .btn{border-color:#efeee9;color:#efeee9}
+.ctaband .btn:hover{background:var(--acc);border-color:var(--acc);color:#fff}
+footer{padding:38px 0;color:var(--dim)}
+footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+/* reveal */
+.rv{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease}
+.rv.on{opacity:1;transform:none}
+@media(max-width:960px){
+  .hero{grid-template-columns:1fr;padding-top:48px;min-height:0}
+  .vp{min-height:340px}
+  .feats{grid-template-columns:1fr}
+  .step{grid-template-columns:64px 54px 1fr;grid-template-rows:auto auto}
+  .step p{grid-column:1/-1}
+  .gallery{grid-template-columns:repeat(2,1fr)}
+  .nav .btns .hide-sm{display:none}
 }
-.share #dl,.share #cp,.share #sh,.share #saveBtn,.share #loadBtn,.share #shareBtn,.share .gcodegrp{display:none!important}
-#orderBox{display:none;margin-top:14px;padding:12px;border:1px solid var(--accent);border-radius:6px}
-.share #orderBox{display:block}
-#orderBox p{font-size:12.5px;color:var(--dim);margin-bottom:8px}
-#orderBox input,#orderBox textarea{width:100%;background:var(--panel2);border:1px solid var(--line);
-  color:var(--ink);border-radius:4px;padding:7px;font:12.5px var(--mono);margin-bottom:6px;height:auto;resize:none}
-#orderBox a{display:inline-block;background:var(--accent);color:#181307;font-weight:700;
-  padding:8px 14px;border-radius:5px;text-decoration:none;font-size:13px}
-::-webkit-scrollbar{width:9px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
 </style>
 </head>
 <body>
-<div id="app">
-<aside>
-  <header>
-    <h1>PATTERN<b>.WLY</b></h1>
-    <p>With Layers · toolpath studio</p>
-  </header>
-  <div id="ctrl">
 
-    <div class="grp"><h2>Model</h2>
-      <div class="row"><label>Mode</label>
-        <select id="mode">
-          <option value="weave" selected>Organizer tray (woven)</option>
-          <option value="vase">Vase / lamp (profile + pattern)</option>
-          <option value="tray">Tray / coaster (base + fin wall)</option>
-          <option value="knit">Knit ring (chain torus)</option>
-        </select></div>
-      <div class="mini">
-        <button id="saveBtn">Export JSON</button>
-        <button id="loadBtn">Import JSON</button>
-        <button id="shareBtn">Customer link</button>
-        <input type="file" id="loadFile" accept=".json" style="display:none">
+<header>
+  <div class="wrap nav">
+    <a class="logo" href="#top">PATTERN<b>.WLY</b></a>
+    <div class="btns">
+      <a class="btn hide-sm" href="app.html#share=1">ORDER A PRINT</a>
+      <a class="btn solid" href="app.html">OPEN THE APP <span class="em">→</span></a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ================= HERO ================= -->
+  <section class="wrap hero">
+    <div>
+      <div class="mono kick">Parametric toolpaths · written straight to gcode</div>
+      <h1>Skip the<br><span class="g">slicer.</span></h1>
+      <p class="sub">Woven trays, coil vases, lampshades, knit rings — pieces made of a single
+        flowing extrusion your slicer could never plan. Pattern.wly writes the printer file
+        directly: every coil, stitch and strand is placed on purpose.</p>
+      <a class="btn solid" href="app.html">OPEN THE APP — FREE <span class="em">→</span></a>
+      <div class="note">↳ Runs in your browser · Bambu P1S ready · nothing to install</div>
+    </div>
+    <div class="vp">
+      <canvas id="heroCv"></canvas>
+      <span class="corner c1"></span><span class="corner c2"></span>
+      <span class="corner c3"></span><span class="corner c4"></span>
+      <span class="tag t1">Viewport · vase.gcode</span>
+      <span class="tag t2">H · 240 mm</span>
+      <span class="tag t3">Live</span>
+    </div>
+  </section>
+
+  <!-- ================= CHIPS ================= -->
+  <div class="chips"><div class="row">
+    <span class="chip">Spiral vase mode</span>
+    <span class="chip">Stitch textures</span>
+    <span class="chip">Woven trays</span>
+    <span class="chip">Knit rings</span>
+    <span class="chip">Bambu P1S ready</span>
+    <span class="chip">Gcode direct</span>
+    <span class="chip">No CAD needed</span>
+  </div></div>
+
+  <!-- ================= GALLERY ================= -->
+  <section class="gallery">
+    <div class="tile"><canvas data-draw="coil"></canvas><span class="lb">Rope coil · top</span></div>
+    <div class="tile"><canvas data-draw="knit"></canvas><span class="lb">Knit ring · torus</span></div>
+    <div class="tile"><canvas data-draw="stitch"></canvas><span class="lb">Stitch wall · detail</span></div>
+    <div class="tile"><canvas data-draw="growth"></canvas><span class="lb">Brain coral · base</span></div>
+    <div class="tile"><canvas data-draw="weave"></canvas><span class="lb">Woven rows · base</span></div>
+    <div class="tile"><canvas data-draw="flute"></canvas><span class="lb">Sine flutes · vase</span></div>
+  </section>
+
+  <!-- ================= WORKFLOW (dark) ================= -->
+  <section class="darksec">
+    <div class="wrap">
+      <div class="mono kick rv">01 · App workflow</div>
+      <h2 class="rv">Sliders in,<br>gcode out.</h2>
+
+      <div class="step rv">
+        <div class="num">01</div>
+        <div class="ic"><svg viewBox="0 0 44 44"><path d="M22 4 q-10 8 0 18 q10 10 0 18" stroke-dasharray="0"/><path d="M10 4 v36" stroke-dasharray="2 5"/></svg></div>
+        <h3>Pick a mode</h3>
+        <p>Woven organizer tray, vase or lamp, coaster, knit ring — each one is its own toolpath engine.</p>
+      </div>
+      <div class="step rv">
+        <div class="num">02</div>
+        <div class="ic"><svg viewBox="0 0 44 44"><path d="M4 12 h36 M4 22 h36 M4 32 h36"/><circle cx="28" cy="12" r="4" fill="#f04a00"/><circle cx="14" cy="22" r="4" fill="#f04a00"/><circle cx="34" cy="32" r="4" fill="#f04a00"/></svg></div>
+        <h3>Shape it</h3>
+        <p>Sliders for size, height, twist and flare — plus a profile curve you drag to set the silhouette.</p>
+      </div>
+      <div class="step rv">
+        <div class="num">03</div>
+        <div class="ic"><svg viewBox="0 0 44 44"><path d="M4 14 q5 -8 10 0 t10 0 t10 0 t10 0 M4 24 q5 -8 10 0 t10 0 t10 0 t10 0 M4 34 q5 -8 10 0 t10 0 t10 0 t10 0"/></svg></div>
+        <h3>Texture it</h3>
+        <p>Stitches, flutes, ripples, weaves, coral growth — surface geometry a mesh slicer can't express.</p>
+      </div>
+      <div class="step rv">
+        <div class="num">04</div>
+        <div class="ic"><svg viewBox="0 0 44 44"><rect x="8" y="8" width="28" height="28"/><path d="M22 14 v12 M16 21 l6 6 6-6"/></svg></div>
+        <h3>Print it</h3>
+        <p>Download .gcode with real Bambu start and end blocks, on-screen progress, and one continuous path.</p>
       </div>
     </div>
+  </section>
 
-
-    <!-- ============ WEAVE TRAY ============ -->
-    <div class="grp" data-mode="weave"><h2>Tray shape</h2>
-      <div class="row"><label>Size (mm)</label><input type="number" id="wvLen" value="110" step="5"></div>
-      <div class="row"><label>Triangle-ness (%)</label><input type="number" id="wvTri" value="6" step="1"></div>
-      <div class="row"><label>Egg-ness (%)</label><input type="number" id="wvEgg" value="3" step="1"></div>
-      <div class="row"><label>Sides (0 = pebble)</label><input type="number" id="wvSides" value="0" step="1" min="0" max="12"></div>
-      <div class="row"><label>Corner radius (mm)</label><input type="number" id="wvCornerR" value="8" step="1"></div>
-      <div class="row"><label>Rotation (°)</label><input type="number" id="wvRot" value="0" step="15"></div>
-      <div class="row"><label>Binding rim loops</label><input type="number" id="wvRim" value="1" step="1" min="0"></div>
-      <div class="note">Sides ≥ 3 makes a rounded polygon; tri/egg apply only to the pebble. Set rim 0 for a raw open edge.</div>
-    </div>
-
-    <div class="grp" data-mode="weave"><h2>Base pattern</h2>
-      <div class="row"><label>Pattern</label>
-        <select id="wvBase">
-          <option value="weave" selected>Woven rows</option>
-          <option value="growth">Brain coral (growth)</option>
-        </select></div>
-      <div class="row" data-wvb="growth"><label>Fold gap (mm)</label><input type="number" id="wvGap" value="3.4" step="0.2"></div>
-      <div class="row" data-wvb="growth"><label>Seed</label><input type="number" id="wvSeed" value="42" step="1"></div>
-      <div class="row" data-wvb="weave"><label>Row pitch (mm)</label><input type="number" id="wvPitch" value="3.0" step="0.2"></div>
-      <div class="row" data-wvb="weave"><label>Wave length (mm)</label><input type="number" id="wvLambda" value="2.6" step="0.2"></div>
-      <div class="row"><label>Strand width (mm)</label><input type="number" id="wvStrand" value="0.8" step="0.05"></div>
-      <div class="row"><label>Pattern layers</label><input type="number" id="wvLayers" value="2" step="1"></div>
-      <div class="row" data-wvb="weave"><label>Cross angle (°/layer)</label><input type="number" id="wvCross" value="90" step="15"></div>
-      <div class="row"><label>Solid base layers (plinth)</label><input type="number" id="wvSolid" value="0" step="1"></div>
-    </div>
-
-    <div class="grp" data-mode="weave"><h2>Rope coil wall</h2>
-      <div class="row"><label>Wall layers</label><input type="number" id="wvWallLayers" value="30" step="2"></div>
-      <div class="row"><label>Coil waves (around)</label><input type="number" id="wvK" value="60" step="4"></div>
-      <div class="row"><label>Z amplitude (mm)</label><input type="number" id="wvZAmp" value="1.1" step="0.1"></div>
-      <div class="row"><label>R amplitude (mm)</label><input type="number" id="wvRAmp" value="1.1" step="0.1"></div>
-      <div class="row"><label>Twist (°/layer)</label><input type="number" id="wvTwistW" value="0" step="0.5"></div>
-      <div class="row"><label>Flare (mm/layer)</label><input type="number" id="wvFlare" value="0.1" step="0.05"></div>
-      <div class="row"><label>Curve wall (profile below)</label><input type="checkbox" id="wvCurveOn" checked></div>
-      <div class="row"><label>Curve depth (mm)</label><input type="number" id="wvCurveD" value="12" step="1"></div>
-      <div class="note">With curve on, the profile curve sets the wall silhouette: right of start = outward, left = inward.</div>
-    </div>
-
-    <!-- ============ VASE ============ -->
-    <div class="grp" data-mode="vase"><h2>Vase shape</h2>
-      <div class="row"><label>Length X (mm)</label><input type="number" id="vLenX" value="70" step="5"></div>
-      <div class="row"><label>Width Y (mm)</label><input type="number" id="vWidY" value="70" step="5"></div>
-      <div class="row"><label>Height (mm)</label><input type="number" id="vH" value="60" step="5"></div>
-      <div class="row"><label>Sides (0 = round)</label></div>
-      <div class="seg" id="sidesSeg"></div>
-      <div class="row"><label>Corner radius (mm)</label><input type="number" id="vCorner" value="4" step="1"></div>
-      <div class="row"><label>Twist (°/mm of Z)</label><input type="number" id="vTwist" value="0" step="0.5"></div>
-      <div class="row"><label>Spiralize (vase mode)</label><input type="checkbox" id="vSpiral" checked></div>
-    </div>
-
-    <div class="grp" data-mode="vase weave"><h2>Profile (radius vs Z)</h2>
-      <canvas id="profCv"></canvas>
-      <div class="note">Drag points · double-tap curve to add · double-tap a point to remove</div>
-      <div class="mini">
-        <button id="profStraight">Straight</button>
-        <button id="profCurvy">Curvy</button>
-        <button id="profReset">Reset</button>
+  <!-- ================= FEATURES ================= -->
+  <section class="lightsec">
+    <div class="wrap">
+      <div class="mono kick rv">02 · Why Pattern.wly</div>
+      <h2 class="rv">Made to print,<br>not just preview.</h2>
+      <div class="feats">
+        <div class="feat rv"><div class="num">01</div><div>
+          <h3>One unbroken toolpath</h3>
+          <p>Walls print as a single spiral — no seams, no retractions, no travel scars. The flow never stops until the piece is done.</p>
+          <span class="tag">Flow</span></div></div>
+        <div class="feat rv"><div class="num">02</div><div>
+          <h3>Stitch &amp; weave textures</h3>
+          <p>Knit-look stitch walls, woven bases, coral growth, guilloché, hammered — tuned by depth, spacing and layer offset.</p>
+          <span class="tag">Texture</span></div></div>
+        <div class="feat rv"><div class="num">03</div><div>
+          <h3>Bambu P1S out of the box</h3>
+          <p>Real machine start/end gcode, print-time and layer progress on the printer screen, plus a generic profile for other FDM machines.</p>
+          <span class="tag">Printers</span></div></div>
+        <div class="feat rv"><div class="num">04</div><div>
+          <h3>Speed &amp; flow that hold up</h3>
+          <p>Extrusion volume computed exactly per line width and height, first layers handled properly, speeds guarded per feature.</p>
+          <span class="tag">Speed</span></div></div>
+        <div class="feat rv"><div class="num">05</div><div>
+          <h3>Guard-railed parameters</h3>
+          <p>Every slider extreme keeps coordinates on the bed, radii positive and the nozzle out of your finished print.</p>
+          <span class="tag">Safe</span></div></div>
+        <div class="feat rv"><div class="num">06</div><div>
+          <h3>Customer links</h3>
+          <p>Share a design link that opens the live model with an order form — the pattern stays editable, the print file stays with you.</p>
+          <span class="tag">Share</span></div></div>
+        <div class="feat rv"><div class="num">07</div><div>
+          <h3>Runs in your browser</h3>
+          <p>One page, no install, no account. Open it and you're already on the latest version.</p>
+          <span class="tag">Browser</span></div></div>
+        <div class="feat rv"><div class="num">08</div><div>
+          <h3>Audited output</h3>
+          <p>Hundreds of automated checks on geometry, extrusion math and gcode structure run against every change.</p>
+          <span class="tag">Tested</span></div></div>
       </div>
     </div>
+  </section>
 
-    <div class="grp" data-mode="vase"><h2>Pattern</h2>
-      <div class="row"><label>Type</label>
-        <select id="pPat">
-          <option value="smooth">Smooth</option>
-          <option value="sine" selected>Sine flutes (vertical)</option>
-          <option value="ripple">Ripple (horizontal rings)</option>
-          <option value="vwave">V-Wave (wavy flutes)</option>
-          <option value="hwave">H-Wave (wavy rings)</option>
-          <option value="bumps">Bumps</option>
-          <option value="diamond">Diamond lattice</option>
-          <option value="pleats">Pleats (sharp)</option>
-          <option value="guilloche">Guilloché</option>
-          <option value="hammered">Hammered</option>
-        </select></div>
-      <div class="row"><label>Amplitude (mm)</label><input type="number" id="pAmp" value="2.0" step="0.2"></div>
-      <div class="row"><label>Frequency (around)</label><input type="number" id="pFreq" value="24" step="1"></div>
-      <div class="row"><label>Vertical frequency</label><input type="number" id="pFreqZ" value="8" step="1"></div>
-      <div class="row"><label>Pattern offset (°)</label><input type="number" id="pOff" value="0" step="5"></div>
-      <div class="row"><label>Fade in (mm)</label><input type="number" id="pFadeIn" value="8" step="2"></div>
-      <div class="row"><label>Fade out (mm)</label><input type="number" id="pFadeOut" value="0" step="2"></div>
+  <!-- ================= FAQ ================= -->
+  <section class="faqsec">
+    <div class="wrap">
+      <div class="mono kick rv">03 · FAQ</div>
+      <h2 class="rv">Asked often.</h2>
+      <div class="faq rv">
+        <details open>
+          <summary>Do I need CAD experience? <span class="q">Q.01</span></summary>
+          <p>No. Everything is sliders and one draggable profile curve. If you've used a slicer before,
+             you'll be comfortable in minutes — knowing your printer's quirks helps more than any CAD skill.</p>
+        </details>
+        <details>
+          <summary>Which printers are supported? <span class="q">Q.02</span></summary>
+          <p>Bambu Lab P1S and X1C are first-class, with the real machine start/end blocks and progress
+             display built in. Presets also cover the A1, A1 mini and Prusa MK4, and the start/end gcode
+             is fully editable so any FDM printer can be dialed in.</p>
+        </details>
+        <details>
+          <summary>Why gcode instead of STL? <span class="q">Q.03</span></summary>
+          <p>Because the pattern <em>is</em> the toolpath. A coil wall or a stitch texture isn't a solid
+             you can mesh and re-slice — the moment a slicer plans it, the flow, seams and layer rhythm
+             are gone. Writing gcode directly is the whole point.</p>
+        </details>
+        <details>
+          <summary>Will every design actually print? <span class="q">Q.04</span></summary>
+          <p>The parameters are guard-railed so the file is always mechanically valid — but extreme art
+             still pushes physics. Big overhangs and airy weaves reward starting from the defaults and
+             changing one thing at a time.</p>
+        </details>
+        <details>
+          <summary>Can customers order without getting the file? <span class="q">Q.05</span></summary>
+          <p>Yes. The Customer Link opens the live 3D design with an order form and no download buttons.
+             The customer plays with the shape; the print file stays with With Layers.</p>
+        </details>
+        <details>
+          <summary>What does it cost? <span class="q">Q.06</span></summary>
+          <p>The studio is free to use in your browser. With Layers earns by printing the pieces —
+             order through the app, or download the gcode and run it on your own machine.</p>
+        </details>
+      </div>
     </div>
+  </section>
 
-    <div class="grp" data-mode="vase"><h2>Surface texture · stitches</h2>
-      <div class="row"><label>Enable stitches</label><input type="checkbox" id="stOn" checked></div>
-      <div class="row"><label>Depth (mm)</label><input type="number" id="stDepth" value="0.7" step="0.1"></div>
-      <div class="row"><label>Spacing (mm)</label><input type="number" id="stSpace" value="2.6" step="0.5"></div>
-      <div class="row"><label>Length (mm)</label><input type="number" id="stLen" value="1.2" step="0.5"></div>
-      <div class="row"><label>Shape (0 sharp · 1 round)</label><input type="number" id="stShape" value="1.0" step="0.1" min="0" max="1"></div>
-      <div class="row"><label>Layer offset (× spacing)</label><input type="number" id="stLayerOff" value="0.5" step="0.1"></div>
-      <div class="row"><label>Flow modulation (0–1)</label><input type="number" id="stFlow" value="0" step="0.1" min="0" max="1"></div>
-    </div>
+  <!-- ================= CTA ================= -->
+  <section class="ctaband">
+    <div class="mono kick" style="margin-bottom:22px">04 · Start</div>
+    <h2>Your printer is<br>capable of more.</h2>
+    <p>Open the studio, drag a slider, watch the toolpath rebuild live.</p>
+    <a class="btn" href="app.html">OPEN THE APP →</a>
+  </section>
 
-    <div class="grp" data-mode="vase"><h2>Floor</h2>
-      <div class="row"><label>Fill</label>
-        <select id="fFill">
-          <option value="rings">Concentric rings</option>
-          <option value="spiral" selected>Spiral (single path)</option>
-          <option value="linear">Linear</option>
-          <option value="lamp">Lamp (E27 ring + spokes)</option>
-          <option value="none">None (open tube)</option>
-        </select></div>
-      <div class="row"><label>Bottom layers</label><input type="number" id="fLayers" value="4" step="1"></div>
-      <div class="row" data-fill="lamp"><label>Inner ring Ø (mm)</label><input type="number" id="fInnerD" value="41" step="1"></div>
-      <div class="row" data-fill="lamp"><label>Ring wall (mm)</label><input type="number" id="fRingT" value="5" step="1"></div>
-      <div class="row" data-fill="lamp"><label>Spokes</label><input type="number" id="fSpokes" value="5" step="1"></div>
-      <div class="row" data-fill="lamp"><label>Spoke width (mm)</label><input type="number" id="fSpokeW" value="8" step="1"></div>
-    </div>
-
-    <!-- ============ TRAY (unchanged) ============ -->
-    <div class="grp" data-mode="tray" style="display:none"><h2>Tray</h2>
-      <div class="row"><label>Diameter (mm)</label><input type="number" id="dia" value="90" step="5"></div>
-      <div class="row"><label>Base layers</label><input type="number" id="baseLayers" value="3" step="1"></div>
-      <div class="row"><label>Base pattern</label>
-        <select id="pattern">
-          <option value="growth">Differential growth (coral)</option>
-          <option value="meander">Organic meander (squiggle)</option>
-          <option value="waves">Wave rings</option>
-          <option value="hilbert">Hilbert maze</option>
-          <option value="concentric">Concentric spiral</option>
-        </select></div>
-      <div class="row" data-pat="growth"><label>Center hole Ø (0 = none)</label><input type="number" id="holeD" value="0" step="2" min="0"></div>
-      <div class="row" data-pat="growth"><label>Fold gap (mm)</label><input type="number" id="gapS" value="3.4" step="0.2"></div>
-      <div class="row" data-pat="growth"><label>Strand width (mm)</label><input type="number" id="strandW" value="0.8" step="0.05"></div>
-      <div class="row" data-pat="growth"><label>Seed</label><input type="number" id="seed" value="42" step="1"></div>
-      <div class="row" data-pat="meander"><label>Squiggle cell (mm)</label><input type="number" id="cell" value="3.2" step="0.2"></div>
-      <div class="row" data-pat="meander"><label>Squiggle wavelength (mm)</label><input type="number" id="wlen" value="3.4" step="0.2"></div>
-      <div class="row" data-pat="waves"><label>Wave count</label><input type="number" id="wN" value="9" step="1"></div>
-      <div class="row" data-pat="waves"><label>Wave amplitude (mm)</label><input type="number" id="wAmp" value="0.8" step="0.1"></div>
-      <div class="row" data-pat="hilbert"><label>Maze cell (mm)</label><input type="number" id="hCell" value="2.4" step="0.2"></div>
-    </div>
-
-    <div class="grp" data-mode="tray" style="display:none"><h2>Wall (fins)</h2>
-      <div class="row"><label>Enable wall</label><input type="checkbox" id="wallOn" checked></div>
-      <div class="row"><label>Wall layers</label><input type="number" id="wallLayers" value="45" step="5"></div>
-      <div class="row"><label>Fin count</label><input type="number" id="finN" value="60" step="2"></div>
-      <div class="row"><label>Fin depth (mm)</label><input type="number" id="finDepth" value="2.2" step="0.2"></div>
-      <div class="row"><label>Twist (°/layer)</label><input type="number" id="twist" value="0.8" step="0.2"></div>
-      <div class="row"><label>Flare (mm/layer)</label><input type="number" id="flare" value="0.06" step="0.02"></div>
-    </div>
-
-    <!-- ============ KNIT (unchanged) ============ -->
-    <div class="grp" data-mode="knit" style="display:none"><h2>Knit ring</h2>
-      <div class="row"><label>Ring Ø centerline (mm)</label><input type="number" id="ringD" value="70" step="5"></div>
-      <div class="row"><label>Wave count</label><input type="number" id="kN" value="48" step="2"></div>
-      <div class="row"><label>Z amplitude (mm)</label><input type="number" id="kZ" value="1.4" step="0.1"></div>
-      <div class="row"><label>R amplitude (mm)</label><input type="number" id="kR" value="1.6" step="0.1"></div>
-      <div class="row"><label>Layers</label><input type="number" id="kLayers" value="46" step="2"></div>
-      <div class="row"><label>Brim</label><input type="checkbox" id="brim" checked></div>
-    </div>
-
-    <!-- ============ PRINTER ============ -->
-    <div class="grp"><h2>Printer</h2>
-      <div class="row"><label>Model</label>
-        <select id="printer">
-          <option value="p1s" selected>Bambu P1S (256³)</option>
-          <option value="x1c">Bambu X1C (256³)</option>
-          <option value="a1">Bambu A1 (256³)</option>
-          <option value="a1m">Bambu A1 mini (180³)</option>
-          <option value="mk4">Prusa MK4 (250×210)</option>
-          <option value="custom">Custom</option>
-        </select></div>
-      <div class="row"><label>Material</label>
-        <select id="mat">
-          <option value="pla" selected>PLA (220 / 60)</option>
-          <option value="petg">PETG (245 / 70)</option>
-        </select></div>
-      <div class="row"><label>Nozzle</label>
-        <select id="nozzle">
-          <option value="0.4" selected>0.4 mm</option>
-          <option value="0.6">0.6 mm</option>
-          <option value="0.8">0.8 mm</option>
-        </select></div>
-      <div class="note">Raw .gcode prints from the external spool — Bambu only routes the AMS from a .gcode.3mf.</div>
-      <div class="row"><label>Layer height (mm)</label><input type="number" id="lh" value="0.2" step="0.05"></div>
-      <div class="row"><label>Line width (mm)</label><input type="number" id="lw" value="0.45" step="0.05"></div>
-      <div class="row"><label>First layer height (mm)</label><input type="number" id="flh" value="0.25" step="0.05"></div>
-      <div class="row"><label>First layer width (mm)</label><input type="number" id="flw" value="0.5" step="0.05"></div>
-      <div class="row"><label>Flow ×</label><input type="number" id="flow" value="1.0" step="0.02"></div>
-      <div class="row"><label>Nozzle (°C)</label><input type="number" id="tN" value="220" step="5"></div>
-      <div class="row"><label>Bed (°C)</label><input type="number" id="tB" value="60" step="5"></div>
-      <div class="row"><label>First layer (mm/s)</label><input type="number" id="v1" value="30" step="2"></div>
-      <div class="row"><label>Base fill (mm/s)</label><input type="number" id="vBase" value="60" step="5"></div>
-      <div class="row"><label>Wall / knit (mm/s)</label><input type="number" id="vWall" value="60" step="5"></div>
-      <div class="row"><label>Travel (mm/s)</label><input type="number" id="vT" value="150" step="10"></div>
-      <div class="row"><label>Part cooling fan (%)</label><input type="number" id="fanPct" value="100" step="10" min="0" max="100"></div>
-      <div class="row"><label>Fan from layer</label><input type="number" id="fanL" value="3" step="1"></div>
-      <div class="row"><label>Bed center X,Y (mm)</label><input type="number" id="cx" value="128" step="1"></div>
-    </div>
-
-    <div class="grp gcodegrp"><h2>Start gcode</h2><textarea id="gStart"></textarea></div>
-    <div class="grp gcodegrp"><h2>End gcode</h2><textarea id="gEnd"></textarea></div>
-    <div id="orderBox">
-      <p>Like this design? With Layers can print it for you. The pattern stays editable — the print file stays with us.</p>
-      <input id="odName" placeholder="Your name">
-      <input id="odContact" placeholder="LINE ID or phone">
-      <textarea id="odNote" placeholder="Notes — color, quantity, deadline" rows="2"></textarea>
-      <button id="orderBtn" class="cta" style="width:100%">Order this print</button>
-      <p id="odStatus" style="margin-top:8px"></p>
-    </div>
-    <div class="grp"><div class="row"><label>Show travel moves</label><input type="checkbox" id="showT"></div></div>
-  </div>
-</aside>
-
-<main>
-  <canvas id="cv"></canvas>
-  <div id="hint">drag = rotate · wheel/pinch = zoom</div>
-  <div class="tag" id="tag"></div>
-  <div id="bar">
-    <button id="gen" class="cta">Generate</button>
-    <button id="dl" class="sec" disabled>Download .gcode</button>
-    <button id="cp" class="sec" disabled>Copy</button>
-    <button id="sh" class="sec" disabled>Share</button>
-    <div id="stats">—</div>
-  </div>
 </main>
-</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<footer>
+  <div class="wrap">
+    <span class="logo" style="font-size:18px">PATTERN<b>.WLY</b></span>
+    <span class="mono">With Layers · toolpath studio</span>
+    <span>© 2026 With Layers</span>
+  </div>
+</footer>
+
 <script>
 'use strict';
-const $=id=>document.getElementById(id);
-const num=id=>{const v=parseFloat($(id).value);return isFinite(v)?v:0;};
-const TAU=Math.PI*2, FIL_A=Math.PI*Math.pow(1.75/2,2); // 2.405 mm²
-/* order webhook: create an n8n Webhook node (POST) with this exact path */
-const ORDER_WEBHOOK='https://natdanai2707.app.n8n.cloud/webhook/pattern-wly-order';
-/* real Bambu P1S machine gcode captured from Bambu Studio 02.06 (P1S 0.4) */
-const P1S_START="; EXECUTABLE_BLOCK_START\nM73 P0 R25\nM201 X20000 Y20000 Z500 E5000\nM203 X500 Y500 Z20 E30\nM204 P20000 R5000 T20000\nM205 X9.00 Y9.00 Z3.00 E2.50\nM106 S0\nM106 P2 S0\n; FEATURE: Custom\n;===== machine: P1S-0.4 ========================\n;===== date: 20251031 =====================\n;===== turn on the HB fan & MC board fan =================\nM104 S75 ;set extruder temp to turn on the HB fan and prevent filament oozing from nozzle\nM710 A1 S255 ;turn on MC fan by default(P1S)\n;===== reset machine status =================\nM290 X40 Y40 Z2.6666666\nG91\nM17 Z0.4 ; lower the z-motor current\nG380 S2 Z30 F300 ; G380 is same as G38; lower the hotbed , to prevent the nozzle is below the hotbed\nG380 S2 Z-25 F300 ;\nG1 Z5 F300;\nG90\nM17 X1.2 Y1.2 Z0.75 ; reset motor current to default\nM960 S5 P1 ; turn on logo lamp\nG90\nM220 S100 ;Reset Feedrate\nM221 S100 ;Reset Flowrate\nM73.2   R1.0 ;Reset left time magnitude\nM1002 set_gcode_claim_speed_level : 5\nM221 X0 Y0 Z0 ; turn off soft endstop to prevent protential logic problem\nG29.1 Z0 ; clear z-trim value first\nM204 S10000 ; init ACC set to 10m/s^2\n\n;===== heatbed preheat ====================\nM1002 gcode_claim_action:54\nM140 S70 ;set bed temp\nM190 S70 ;wait for bed temp\n\n\n\n;=============turn on fans to prevent PLA jamming=================\n\nM106 P2 S100 ; turn on big fan ,to cool down toolhead\n\n;===== prepare print temperature and material ==========\nM104 S255 ;set extruder temp\nG91\nG0 Z10 F1200\nG90\nG28 X\nM975 S1 ; turn on\nG1 X60 F12000\nG1 Y245\nG1 Y265 F3000\nM620 M\nM620 S0A   ; switch material if AMS exist\n    M109 S255\n    G1 X120 F12000\n\n    G1 X20 Y50 F12000\n    G1 Y-3\n    T0\n    G1 X54 F12000\n    G1 Y265\n    M400\nM621 S0A\nM620.1 E F299.339 T270\n\n\nM412 S1 ; ===turn on filament runout detection===\n\nM109 S250 ;set nozzle to common flush temp\nM106 P1 S0\nG92 E0\nM73 P2 R25\nG1 E50 F200\nM400\nM104 S255\nG92 E0\nM73 P18 R21\nG1 E50 F200\nM400\nM106 P1 S255\nG92 E0\nG1 E5 F300\nM109 S235 ; drop nozzle temp, make filament shink a bit\nG92 E0\nM73 P19 R20\nG1 E-0.5 F300\n\nM73 P20 R20\nG1 X70 F9000\nG1 X76 F15000\nG1 X65 F15000\nG1 X76 F15000\nG1 X65 F15000; shake to put down garbage\nG1 X80 F6000\nG1 X95 F15000\nG1 X80 F15000\nM73 P21 R20\nG1 X165 F15000; wipe and shake\nM400\nM106 P1 S0\n;===== prepare print temperature and material end =====\n\n\n;===== wipe nozzle ===============================\nM1002 gcode_claim_action : 14\nM975 S1\nM106 S255\nG1 X65 Y230 F18000\nG1 Y264 F6000\nM109 S235\nG1 X100 F18000 ; first wipe mouth\n\nG0 X135 Y253 F20000  ; move to exposed steel surface edge\nG28 Z P0 T300; home z with low precision,permit 300deg temperature\nG29.2 S0 ; turn off ABL\nG0 Z5 F20000\n\nG1 X60 Y265\nG92 E0\nG1 E-0.5 F300 ; retrack more\nG1 X100 F5000; second wipe mouth\nG1 X70 F15000\nG1 X100 F5000\nG1 X70 F15000\nG1 X100 F5000\nG1 X70 F15000\nG1 X100 F5000\nG1 X70 F15000\nG1 X90 F5000\nG0 X128 Y261 Z-1.5 F20000  ; move to exposed steel surface and stop the nozzle\nM104 S140 ; set temp down to heatbed acceptable\nM106 S255 ; turn on fan (G28 has turn off fan)\n\nM221 S; push soft endstop status\nM221 Z0 ;turn off Z axis endstop\nG0 Z0.5 F20000\nG0 X125 Y259.5 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y262.5\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y260.0\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y262.0\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y260.5\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y261.5\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 Z0.5 F20000\nG0 X125 Y261.0\nG0 Z-1.01\nG0 X131 F211\nG0 X124\nG0 X128\nG2 I0.5 J0 F300\nG2 I0.5 J0 F300\nG2 I0.5 J0 F300\nG2 I0.5 J0 F300\n\nM109 S140 ; wait nozzle temp down to heatbed acceptable\nG2 I0.5 J0 F3000\nG2 I0.5 J0 F3000\nG2 I0.5 J0 F3000\nG2 I0.5 J0 F3000\n\nM221 R; pop softend status\nG1 Z10 F1200\nM400\nG1 Z10\nG1 F30000\nG1 X230 Y15\nG29.2 S1 ; turn on ABL\n;G28 ; home again after hard wipe mouth\nM106 S0 ; turn off fan , too noisy\n;===== wipe nozzle end ================================\n\n\n;===== bed leveling ==================================\nM1002 judge_flag g29_before_print_flag\nM622 J1\n\n    M1002 gcode_claim_action : 1\n    G29 A X107.74 Y101.828 I40.3909 J71.1259\n    M400\n    M500 ; save cali data\n\nM623\n;===== bed leveling end ================================\n\n;===== home after wipe mouth============================\nM1002 judge_flag g29_before_print_flag\nM622 J0\n\n    M1002 gcode_claim_action : 13\n    G28\n\nM623\n;===== home after wipe mouth end =======================\n\nM975 S1 ; turn on vibration supression\n\n\n;=============turn on fans to prevent PLA jamming=================\n\nM106 P2 S100 ; turn on big fan ,to cool down toolhead\n\n\nM104 S255 ; set extrude temp earlier, to reduce wait time\n\n;===== mech mode fast check============================\nG1 X128 Y128 Z10 F20000\nM400 P200\nM970.3 Q1 A7 B30 C80  H15 K0\nM974 Q1 S2 P0\n\nG1 X128 Y128 Z10 F20000\nM400 P200\nM970.3 Q0 A7 B30 C90 Q0 H15 K0\nM974 Q0 S2 P0\n\nM975 S1\nG1 F30000\nG1 X230 Y15\nG28 X ; re-home XY\n;===== fmech mode fast check============================\n\n\n;===== nozzle load line ===============================\nM975 S1\nG90\nM83\nT1000\nG1 X18.0 Y1.0 Z0.8 F18000;Move to start position\nM109 S255\nG1 Z0.2\nG0 E2 F300\nG0 X240 E15 F904.991\nG0 Y11 E0.700 F226.248\nG0 X239.5\nG0 E0.2\nG0 Y1.5 E0.700\nG0 X18 E15 F904.991\nM400\n\n;===== for Textured PEI Plate , lower the nozzle as the nozzle was touching topmost of the texture when homing ==\n;curr_bed_type=Textured PEI Plate\n\nG29.1 Z-0.04 ; for Textured PEI Plate\n\n;========turn off light and wait extrude temperature =============\nM1002 gcode_claim_action : 0\nM106 S0 ; turn off fan\nM106 P2 S0 ; turn off big fan\nM106 P3 S0 ; turn off chamber fan\n\nM975 S1 ; turn on mech mode supression";
-const P1S_END="; filament end gcode \n\n;===== date: 20230428 =====================\nM400 ; wait for buffer to clear\nG92 E0 ; zero the extruder\nG1 E-0.8 F1800 ; retract\nG1 Z{ZAFTER} F900 ; raise z above print\nG1 X65 Y245 F12000 ; move to safe pos\nG1 Y265 F3000\n\nG1 X65 Y245 F12000\nG1 Y265 F3000\nM140 S0 ; turn off bed\nM106 S0 ; turn off fan\nM106 P2 S0 ; turn off remote part cooling fan\nM106 P3 S0 ; turn off chamber cooling fan\n\nG1 X100 F12000 ; wipe\n; pull back filament to AMS\nM620 S255\nG1 X20 Y50 F12000\nG1 Y-3\nT255\nG1 X65 F12000\nG1 Y265\nG1 X100 F12000 ; wipe\nM621 S255\nM104 S0 ; turn off hotend\n\nM622.1 S1 ; for prev firware, default turned on\nM1002 judge_flag timelapse_record_flag\nM622 J1\n    M400 ; wait all motion done\n    M991 S0 P-1 ;end smooth timelapse at safe pos\n    M400 S3 ;wait for last picture to be taken\nM623; end of \"timelapse_record_flag\"\n\nM400 ; wait all motion done\nM17 S\nM17 Z0.4 ; lower z motor current to reduce impact if there is something in the bottom\n\n    G1 Z{ZPARK} F600\n    G1 Z{ZPARK2}\n\nM400 P100\nM17 R ; restore z current\n\nM220 S100  ; Reset feedrate magnitude\nM201.2 K1.0 ; Reset acc magnitude\nM73.2   R1.0 ;Reset left time magnitude\nM1002 set_gcode_claim_speed_level : 0\n\nM17 X0.8 Y0.8 Z0.5 ; lower motor current to 45% power\nM73 P100 R0\n; EXECUTABLE_BLOCK_END";
-
-const GEN_START=[
-'; Pattern.wly start (minimal, generic)',
-'; Bambu: you can paste Bambu Studio machine-start gcode here instead',
-'G90','M83',
-'M140 S{BED}','M104 S{NOZ}',
-'G28',
-'M190 S{BED}','M109 S{NOZ}',
-'G1 Z5 F3000',
-'; prime line',
-'G1 X15 Y15 F9000','G1 Z0.25 F1200',
-'G1 X70 Y15 E5.5 F1500',
-'G1 X70 Y15.6 F1500',
-'G1 X15 Y15.6 E5.5 F1500',
-'G1 Z1 F1200'
-].join('\n');
-const GEN_END=[
-'M104 S0','M140 S0','M106 S0',
-'G91','G1 Z12 F3000','G90',
-'G1 X20 Y230 F9000','M84'
-].join('\n');
-$('gStart').value=GEN_START;
-$('gEnd').value=GEN_END;
-
-/* ================= shared helpers ================= */
-function circlePath(cx,cy,r,z,v,w,seam=0,ds=0.35){
-  const n=Math.max(24,Math.ceil(TAU*r/ds)), pts=[];
-  for(let i=0;i<=n;i++){const a=seam+TAU*i/n;pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a),z]);}
-  return {pts,v,w};
-}
-// value noise for hammered pattern
-function vnHash(i,j){const n=Math.sin(i*127.1+j*311.7)*43758.5453;return n-Math.floor(n);}
-function vnoise(x,y){
-  const xi=Math.floor(x),yi=Math.floor(y),fx=x-xi,fy=y-yi;
-  const u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
-  return vnHash(xi,yi)*(1-u)*(1-v)+vnHash(xi+1,yi)*u*(1-v)+
-         vnHash(xi,yi+1)*(1-u)*v+vnHash(xi+1,yi+1)*u*v;
-}
-
-/* ================= differential growth (tray) ================= */
-function annulusGrowth(Rin,Rout,S,seed){
-  const bnd=typeof Rout==='function'?Rout:(()=>Rout);   // boundary radius as fn of angle
-  let s=(seed>>>0)||1; const rnd=()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};
-  const dmax=S*0.7, dmin=S*0.2, rep=S, ka=0.08, kr=1.4, maxF=S*0.12;
-  let X=[],Y=[];
-  const r0=Math.max(Rin+S*1.3,S*1.2), n0=Math.max(24,Math.round(TAU*r0/(S*0.6)));
-  for(let i=0;i<n0;i++){const a=TAU*i/n0;
-    X.push(r0*Math.cos(a)+(rnd()-0.5)*0.6); Y.push(r0*Math.sin(a)+(rnd()-0.5)*0.6);}
-  let area=0; for(let k=0;k<180;k++){const r=bnd(TAU*k/180);area+=0.5*r*r*(TAU/180);}
-  const targetLen=1.05*(area-Math.PI*Rin*Rin)/S;
-  const cell=rep;
-  let len=0,relax=0;
-  for(let iter=0;iter<4000;iter++){
-    let N=X.length;
-    const m=relax?0:Math.max(1,Math.floor(N/40));
-    for(let g=0;g<m;g++){
-      const i=Math.floor(rnd()*X.length), j=(i+1)%X.length;
-      X.splice(i+1,0,(X[i]+X[j])/2+(rnd()-0.5)*0.15);
-      Y.splice(i+1,0,(Y[i]+Y[j])/2+(rnd()-0.5)*0.15);
-    }
-    N=X.length;
-    const grid=new Map();
-    for(let i=0;i<N;i++){
-      const k=Math.floor(X[i]/cell)+':'+Math.floor(Y[i]/cell);
-      let a=grid.get(k); if(!a){a=[];grid.set(k,a);} a.push(i);
-    }
-    const nX=new Float64Array(N),nY=new Float64Array(N);
-    for(let i=0;i<N;i++){
-      const ip=(i-1+N)%N, inx=(i+1)%N;
-      let fx=((X[ip]+X[inx])/2-X[i])*ka, fy=((Y[ip]+Y[inx])/2-Y[i])*ka;
-      const rr0=Math.hypot(X[i],Y[i])||1e-6, ob=0.02*rep;
-      fx+=X[i]/rr0*ob; fy+=Y[i]/rr0*ob;
-      const gx=Math.floor(X[i]/cell), gy=Math.floor(Y[i]/cell);
-      for(let ax=gx-1;ax<=gx+1;ax++)for(let ay=gy-1;ay<=gy+1;ay++){
-        const a=grid.get(ax+':'+ay); if(!a)continue;
-        for(const j of a){
-          if(j===i||j===ip||j===inx)continue;
-          const dx=X[i]-X[j],dy=Y[i]-Y[j],d=Math.hypot(dx,dy);
-          if(d<rep&&d>1e-6){const w=kr*(1-d/rep)/d;fx+=dx*w;fy+=dy*w;}
-        }
-      }
-      const fm=Math.hypot(fx,fy);
-      if(fm>maxF){fx*=maxF/fm;fy*=maxF/fm;}
-      let px=X[i]+fx,py=Y[i]+fy;
-      const r=Math.hypot(px,py)||1e-6;
-      const bR=bnd(Math.atan2(py,px));
-      if(r>bR){px*=bR/r;py*=bR/r;}
-      if(Rin>0.05&&r<Rin){px*=Rin/r;py*=Rin/r;}
-      nX[i]=px;nY[i]=py;
-    }
-    X=[];Y=[];len=0;
-    for(let i=0;i<N;i++){
-      const j=(i+1)%N;
-      const d=Math.hypot(nX[j]-nX[i],nY[j]-nY[i]); len+=d;
-      X.push(nX[i]);Y.push(nY[i]);
-      if(d>dmax){X.push((nX[i]+nX[j])/2);Y.push((nY[i]+nY[j])/2);}
-    }
-    if(X.length>6){
-      const X2=[X[0]],Y2=[Y[0]];
-      for(let i=1;i<X.length;i++){
-        if(Math.hypot(X[i]-X2[X2.length-1],Y[i]-Y2[Y2.length-1])<dmin)continue;
-        X2.push(X[i]);Y2.push(Y[i]);
-      }
-      X=X2;Y=Y2;
-    }
-    if(len>targetLen&&relax===0)relax=iter+60;
-    if((relax&&iter>=relax)||X.length>30000)break;
-  }
-  const pts=[]; for(let i=0;i<X.length;i++)pts.push([X[i],Y[i]]);
-  pts.push([X[0],Y[0]]);
-  return pts;
-}
-
-/* ================= tray builder (unchanged behaviour) ================= */
-function buildTray(P){
-  const paths=[], R=P.dia/2, cx=P.cx, cy=P.cx;
-  const Rf=R-2.1*P.lw, zf=L=>P.flh+L*P.lh;
-  paths.push(Object.assign(circlePath(cx,cy,R+5,P.flh,P.v1,P.flw),{h:P.flh}));
-  paths.push(Object.assign(circlePath(cx,cy,R+5-P.flw,P.flh,P.v1,P.flw),{h:P.flh}));
-
-  let gPts=null, gHole=false;
-  if(P.pattern==='growth'){
-    gHole=P.holeD>2;
-    const Rin=gHole?P.holeD/2+P.strandW:0, Rout=R-(P.wallOn?2.1*P.lw:P.strandW*0.7);
-    gPts=annulusGrowth(Rin,Rout,Math.max(P.gapS,P.strandW*1.6),P.seed);
-  }
-
-  for(let L=0;L<P.baseLayers;L++){
-    const z=zf(L), v=L===0?P.v1:P.vBase, rot=L*0.35;
-    const h=L===0?P.flh:P.lh, ww=L===0?P.flw:P.lw;
-    if(P.pattern!=='growth'||P.wallOn){
-      paths.push(Object.assign(circlePath(cx,cy,R-P.lw/2,z,v,ww,rot),{h}));
-      paths.push(Object.assign(circlePath(cx,cy,R-1.5*P.lw,z,v,ww,rot),{h}));
-    }
-    if(P.pattern==='growth'){
-      if(gHole){
-        paths.push(Object.assign(circlePath(cx,cy,P.holeD/2+P.strandW/2,z,v,P.strandW,rot),{h}));
-        paths.push(Object.assign(circlePath(cx,cy,P.holeD/2+P.strandW*1.4,z,v,P.strandW,rot),{h}));
-      }
-      const pts=gPts.map(q=>[cx+q[0],cy+q[1],z]);
-      paths.push({pts,v:Math.min(v,25),w:P.strandW,h});
-    }
-    else if(P.pattern==='meander'){
-      const pitch=Math.max(P.cell,P.lw*2.2), amp=(pitch-P.lw)/2;
-      const pts=[]; let th=rot, len=0, r=0.8;
-      let px=cx+r*Math.cos(th), py=cy+r*Math.sin(th);
-      pts.push([px,py,z]);
-      while(true){
-        r=0.8+pitch*(th-rot)/TAU; if(r>Rf)break;
-        const ds=0.3; th+=ds/Math.max(r,1.2); len+=ds;
-        const ramp=Math.min(1,r/(2.5*amp));
-        const rr=Math.min(Rf, r+amp*ramp*Math.sin(TAU*len/P.wlen));
-        pts.push([cx+rr*Math.cos(th),cy+rr*Math.sin(th),z]);
-      }
-      paths.push({pts,v,w:ww,h});
-    }
-    else if(P.pattern==='waves'||P.pattern==='concentric'){
-      const amp=P.pattern==='waves'?P.wAmp:0, N=P.pattern==='waves'?P.wN:1;
-      const pitch=P.lw*1.15+(amp>0?amp*0.15:0);
-      const pts=[]; let th=rot;
-      while(true){
-        const r=0.8+pitch*(th-rot)/TAU; if(r>Rf)break;
-        const ramp=amp?Math.min(1,r/(3*amp)):1;
-        const rr=Math.min(Rf,Math.max(0.3,r+amp*ramp*Math.sin(N*th)));
-        pts.push([cx+rr*Math.cos(th),cy+rr*Math.sin(th),z]);
-        th+=0.3/Math.max(r,1.2);
-      }
-      paths.push({pts,v,w:ww,h});
-    }
-    else if(P.pattern==='hilbert'){
-      const cell=Math.max(P.hCell,P.lw*1.6);
-      let order=Math.ceil(Math.log2((2*Rf)/cell)); order=Math.min(Math.max(order,2),7);
-      const G=1<<order, c=(2*Rf)/G;
-      const hp=[];
-      for(let d=0;d<G*G;d++){
-        let rx,ry,x=0,y=0,t=d;
-        for(let s=1;s<G;s*=2){
-          rx=1&(t>>1); ry=1&(t^rx);
-          if(ry===0){ if(rx===1){x=s-1-x;y=s-1-y;} const tmp=x;x=y;y=tmp; }
-          x+=s*rx; y+=s*ry; t>>=2;
-        }
-        hp.push([cx-Rf+c*(x+0.5)+((L%2)?c/2:0), cy-Rf+c*(y+0.5)]);
-      }
-      const inside=p=>((p[0]-cx)**2+(p[1]-cy)**2)<=(Rf-0.2)**2;
-      let run=null;
-      for(let i=0;i<hp.length;i++){
-        if(inside(hp[i])){ if(!run)run=[]; run.push([hp[i][0],hp[i][1],z]); }
-        else if(run){ if(run.length>1)paths.push({pts:run,v,w:ww,h}); run=null; }
-      }
-      if(run&&run.length>1)paths.push({pts:run,v,w:ww,h});
-    }
-  }
-
-  if(P.wallOn){
-    const golden=2.399963;
-    for(let j=0;j<P.wallLayers;j++){
-      const z=zf(P.baseLayers+j);
-      const Rw=R-P.lw/2+P.flare*j;
-      const seam=j*golden, tw=j*P.twist*Math.PI/180;
-      const n=Math.max(120,Math.ceil(TAU*(Rw+P.finDepth)/0.3)), pts=[];
-      for(let i=0;i<=n;i++){
-        const a=seam+TAU*i/n;
-        const r=Rw+P.finDepth*0.5*(1+Math.sin(P.finN*a+tw));
-        pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a),z]);
-      }
-      if(j===0)paths.push(circlePath(cx,cy,Rw-P.lw,z,P.vWall,P.lw,seam));
-      paths.push({pts,v:P.vWall,w:P.lw});
-    }
-  }
-  return paths;
-}
-
-/* ================= knit builder (unchanged behaviour) ================= */
-function buildKnit(P){
-  const paths=[], Rc=P.ringD/2, cx=P.cx, cy=P.cx;
-  if(P.brim){
-    for(let b=-3;b<=3;b++)
-      paths.push(Object.assign(circlePath(cx,cy,Rc+b*P.flw*0.95,P.flh,P.v1,P.flw),{h:P.flh}));
-  }
-  for(let i=0;i<P.kLayers;i++){
-    const zc=P.flh+i*P.lh, ramp=Math.min(1,i/4), alt=(i%2)*Math.PI;
-    const v=Math.min(i===0?P.v1:P.vWall,22);
-    const n=Math.max(200,Math.ceil(TAU*(Rc+P.kR)/0.3)), pts=[];
-    const seam=i*2.399963;
-    for(let k=0;k<=n;k++){
-      const a=seam+TAU*k/n;
-      const r=Rc+P.kR*ramp*Math.sin(P.kN*a+alt);
-      const z=Math.max(P.flh, zc+P.kZ*ramp*Math.sin(P.kN*a+alt+Math.PI/2));
-      pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a),z]);
-    }
-    const p={pts,v,w:i===0?P.flw:P.lw}; if(i===0)p.h=P.flh;
-    paths.push(p);
-  }
-  return paths;
-}
-
-/* ================= profile editor ================= */
-let profPts=[{t:0,f:0.85},{t:0.35,f:0.7},{t:0.7,f:1.0},{t:1,f:0.8}];
-function profileAt(t){
-  const P=profPts;
-  t=Math.max(0,Math.min(1,t));
-  let i=0; while(i<P.length-2&&t>P[i+1].t)i++;
-  const p1=P[i],p2=P[i+1];
-  const p0=P[i-1]||p1, p3=P[i+2]||p2;
-  const h=p2.t-p1.t||1e-6, u=(t-p1.t)/h;
-  const m1=(p2.f-p0.f)/((p2.t-p0.t)||1e-6)*h;
-  const m2=(p3.f-p1.f)/((p3.t-p1.t)||1e-6)*h;
-  const u2=u*u,u3=u2*u;
-  const f=(2*u3-3*u2+1)*p1.f+(u3-2*u2+u)*m1+(-2*u3+3*u2)*p2.f+(u3-u2)*m2;
-  return Math.max(0.15,Math.min(1.2,f));
-}
-function drawProfile(){
-  const cv=$('profCv'), dpr=window.devicePixelRatio||1;
-  const W=cv.clientWidth, H=cv.clientHeight;
-  if(cv.width!==W*dpr){cv.width=W*dpr;cv.height=H*dpr;}
-  const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
-  g.clearRect(0,0,W,H);
-  const pad=14, iw=W-2*pad, ih=H-2*pad;
-  const X=f=>pad+f*iw, Y=t=>H-pad-t*ih;
-  g.strokeStyle='#2e343b';
-  for(let i=0;i<=4;i++){g.beginPath();g.moveTo(X(i/4),pad);g.lineTo(X(i/4),H-pad);g.stroke();}
-  g.fillStyle='#5b636b';g.font='10px monospace';
-  g.fillText('Z=0',W-32,H-4); g.fillText('Z=max',W-42,10);
-  g.strokeStyle='#e8a33d'; g.lineWidth=2; g.beginPath();
-  for(let k=0;k<=80;k++){const t=k/80,f=profileAt(t);
-    k?g.lineTo(X(f),Y(t)):g.moveTo(X(f),Y(t));}
-  g.stroke();
-  for(const p of profPts){
-    g.beginPath();g.arc(X(p.f),Y(p.t),5,0,TAU);
-    g.fillStyle='#e8a33d';g.fill();
-    g.strokeStyle='#15171a';g.stroke();
-  }
-}
-function profSetup(){
-  const cv=$('profCv');
-  let drag=-1,lastTap=0;
-  const pos=e=>{
-    const r=cv.getBoundingClientRect(), pad=14;
-    const f=(e.clientX-r.left-pad)/(r.width-2*pad);
-    const t=1-(e.clientY-r.top-pad)/(r.height-2*pad);
-    return {f:Math.max(0.15,Math.min(1.2,f)),t:Math.max(0,Math.min(1,t))};
+/* ---------- hero: live wireframe coil vase (the app's real geometry idea) ---------- */
+(function(){
+  const cv=document.getElementById('heroCv'), g=cv.getContext('2d');
+  const TAU=Math.PI*2;
+  // profile: neck-bulge-waist-bulge silhouette, coil rings with wobble
+  const LAYERS=72, SEG=110, pts=[];
+  const prof=t=>{
+    const b1=Math.exp(-Math.pow((t-0.28)/0.16,2)), b2=Math.exp(-Math.pow((t-0.74)/0.14,2));
+    return 0.42+0.55*b1+0.42*b2-0.12*Math.exp(-Math.pow((t-0.5)/0.07,2));
   };
-  const hit=e=>{
-    const r=cv.getBoundingClientRect(),pad=14;
-    for(let i=0;i<profPts.length;i++){
-      const px=pad+profPts[i].f*(r.width-2*pad);
-      const py=r.height-pad-profPts[i].t*(r.height-2*pad);
-      if(Math.hypot(e.clientX-r.left-px,e.clientY-r.top-py)<14)return i;
+  for(let j=0;j<LAYERS;j++){
+    const t=j/(LAYERS-1), r0=prof(t), ring=[];
+    for(let i=0;i<=SEG;i++){
+      const a=TAU*i/SEG;
+      const r=r0+0.035*Math.sin(26*a+j*Math.PI)+0.012*Math.sin(7*a+j*.6);
+      ring.push([r*Math.cos(a), r*Math.sin(a), t-0.5+0.02*Math.sin(26*a+j*Math.PI+Math.PI/2)]);
     }
-    return -1;
+    pts.push(ring);
+  }
+  let rot=0;
+  function draw(){
+    const dpr=window.devicePixelRatio||1;
+    const W=cv.clientWidth,H=cv.clientHeight;
+    if(cv.width!==W*dpr){cv.width=W*dpr;cv.height=H*dpr;}
+    g.setTransform(dpr,0,0,dpr,0,0);
+    g.clearRect(0,0,W,H);
+    const S=Math.min(W,H)*0.72, cx=W/2, cy=H/2;
+    const ca=Math.cos(rot), sa=Math.sin(rot), tilt=0.42;
+    for(let j=0;j<LAYERS;j++){
+      const ring=pts[j];
+      g.beginPath();
+      for(let i=0;i<ring.length;i++){
+        const p=ring[i];
+        const x=p[0]*ca-p[1]*sa, y=p[0]*sa+p[1]*ca;
+        const sx=cx+x*S, sy=cy-(p[2]*S*1.18-y*S*tilt*0.28);
+        i?g.lineTo(sx,sy):g.moveTo(sx,sy);
+      }
+      const t=j/(LAYERS-1);
+      g.strokeStyle=`rgba(240,74,0,${0.28+0.5*t})`;
+      g.lineWidth=1.1;
+      g.stroke();
+    }
+    rot+=0.0035;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ---------- gallery tiles: stylized renders of the app's pattern families ---------- */
+(function(){
+  const TAU=Math.PI*2;
+  const setup=cv=>{
+    const dpr=window.devicePixelRatio||1;
+    const W=cv.clientWidth||420, H=cv.clientHeight||420;
+    cv.width=W*dpr; cv.height=H*dpr;
+    const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+    return {g,W,H};
   };
-  cv.addEventListener('pointerdown',e=>{
-    const i=hit(e), now=Date.now(), dbl=now-lastTap<350; lastTap=now;
-    if(dbl){
-      if(i>0&&i<profPts.length-1){profPts.splice(i,1);drawProfile();return;}
-      if(i<0){const q=pos(e);
-        profPts.push({t:q.t,f:q.f});
-        profPts.sort((a,b)=>a.t-b.t);drawProfile();return;}
-    }
-    if(i>=0){drag=i;cv.setPointerCapture(e.pointerId);}
+  const D={
+    coil(cv){const{g,W,H}=setup(cv);g.fillStyle='#f6f3ec';g.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2;
+      for(let k=0;k<26;k++){const R=(0.12+0.032*k)*Math.min(W,H)*.52;g.beginPath();
+        for(let i=0;i<=240;i++){const a=TAU*i/240;
+          const r=R+2.2*Math.sin(34*a+k*Math.PI);
+          g[i?'lineTo':'moveTo'](cx+r*Math.cos(a),cy+r*Math.sin(a));}
+        g.strokeStyle=`rgba(240,74,0,${0.35+0.02*k})`;g.lineWidth=2.4;g.stroke();}},
+    knit(cv){const{g,W,H}=setup(cv);g.fillStyle='#0d0f0d';g.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2,Rc=Math.min(W,H)*.3;
+      for(let j=0;j<30;j++){g.beginPath();
+        for(let i=0;i<=300;i++){const a=TAU*i/300;
+          const r=Rc+16*Math.sin(40*a+j*Math.PI)+j*2.2;
+          const yy=10*Math.sin(40*a+j*Math.PI+Math.PI/2);
+          g[i?'lineTo':'moveTo'](cx+r*Math.cos(a)*1.05,cy+r*Math.sin(a)*.72+yy-j*1.4+22);}
+        g.strokeStyle=`rgba(64,200,120,${0.16+0.02*j})`;g.lineWidth=1.4;g.stroke();}},
+    stitch(cv){const{g,W,H}=setup(cv);g.fillStyle='#f6f3ec';g.fillRect(0,0,W,H);
+      for(let r=0;r<16;r++){const y=H*0.08+r*H*0.055;g.beginPath();
+        for(let x=0;x<=W;x+=2){const u=((x/W*14+(r%2)*0.5)%1);
+          const b=u<0.45?Math.sin(Math.PI*u/0.45):0;
+          g[x?'lineTo':'moveTo'](x,y-14*b);}
+        g.strokeStyle='rgba(23,24,26,.62)';g.lineWidth=6;g.lineCap='round';g.stroke();}},
+    growth(cv){const{g,W,H}=setup(cv);g.fillStyle='#f04a00';g.fillRect(0,0,W,H);
+      const cx=W/2,cy=H/2;let a=0,r=8;g.beginPath();g.moveTo(cx+r,cy);
+      while(r<Math.min(W,H)*.46){a+=0.09;r+=0.16;
+        const rr=r+10*Math.sin(6*a)+5*Math.sin(13*a+1.2);
+        g.lineTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a));}
+      g.strokeStyle='rgba(255,244,234,.92)';g.lineWidth=5;g.lineJoin='round';g.stroke();},
+    weave(cv){const{g,W,H}=setup(cv);g.fillStyle='#101010';g.fillRect(0,0,W,H);
+      for(let r=0;r<22;r++){const y=H*0.06+r*H*0.043;g.beginPath();
+        for(let x=0;x<=W;x+=3)g[x?'lineTo':'moveTo'](x,y+7*Math.sin(TAU*x/46+(r%2)*Math.PI));
+        g.strokeStyle=`rgba(88,214,110,${0.25+0.02*r})`;g.lineWidth=1.6;g.stroke();}
+      for(let c=0;c<22;c++){const x=W*0.06+c*W*0.043;g.beginPath();
+        for(let y=0;y<=H;y+=3)g[y?'lineTo':'moveTo'](x+7*Math.sin(TAU*y/46+(c%2)*Math.PI),y);
+        g.strokeStyle='rgba(88,214,110,.14)';g.lineWidth=1.6;g.stroke();}},
+    flute(cv){const{g,W,H}=setup(cv);g.fillStyle='#f6f3ec';g.fillRect(0,0,W,H);
+      const cx=W/2;
+      for(let j=0;j<40;j++){const t=j/39,y=H*0.9-t*H*0.8;
+        const R=W*(0.34+0.1*Math.sin(Math.PI*t));g.beginPath();
+        for(let i=0;i<=180;i++){const a=Math.PI*i/180-Math.PI/2;
+          const r=R+6*Math.sin(18*(a+t*1.2));
+          g[i?'lineTo':'moveTo'](cx+r*Math.sin(a),y+r*Math.cos(a)*0.16);}
+        g.strokeStyle=`rgba(240,74,0,${0.25+0.012*j})`;g.lineWidth=1.6;g.stroke();}},
+  };
+  document.querySelectorAll('.tile canvas').forEach(cv=>{
+    const fn=D[cv.dataset.draw]; if(fn)requestAnimationFrame(()=>fn(cv));
   });
-  cv.addEventListener('pointermove',e=>{
-    if(drag<0)return;
-    const q=pos(e), p=profPts[drag];
-    p.f=q.f;
-    if(drag>0&&drag<profPts.length-1){
-      p.t=Math.max(profPts[drag-1].t+0.03,Math.min(profPts[drag+1].t-0.03,q.t));
-    }
-    drawProfile();
-  });
-  cv.addEventListener('pointerup',()=>{drag=-1;});
-  $('profReset').onclick=()=>{profPts=[{t:0,f:0.85},{t:0.35,f:0.7},{t:0.7,f:1.0},{t:1,f:0.8}];drawProfile();};
-  $('profStraight').onclick=()=>{profPts=[{t:0,f:0.9},{t:1,f:0.9}];drawProfile();};
-  $('profCurvy').onclick=()=>{profPts=[{t:0,f:0.72},{t:0.25,f:0.95},{t:0.55,f:0.6},{t:0.8,f:1.0},{t:1,f:0.65}];drawProfile();};
-}
+})();
 
-
-/* ================= woven organizer tray ================= */
-function buildWeave(P){
-  const paths=[], cx=P.cx, cy=P.cx;
-  const R=P.wvLen/2, tA=P.wvTri/100, eA=P.wvEgg/100, rot=P.wvRot*Math.PI/180;
-  const sidesN=Math.round(P.wvSides||0);
-  let shape;
-  if(sidesN>=3){
-    const seg=TAU/sidesN, crF=Math.min(Math.max(P.wvCornerR,0)/R,0.9);
-    shape=a=>{const m=(((a-rot)%seg)+seg)%seg;
-      const poly=Math.cos(seg/2)/Math.cos(m-seg/2);
-      return R*((1-crF)*poly+crF);};
-  }else{
-    const norm=1+Math.abs(tA)+Math.abs(eA);
-    shape=a=>R*(1+tA*Math.cos(3*(a-rot))+eA*Math.cos(a-rot))/norm;
-  }
-  let Rmax=0; for(let k=0;k<360;k++){const r=shape(TAU*k/360);if(r>Rmax)Rmax=r;}
-  const w=P.wvStrand, pitch=Math.max(P.wvPitch,w*1.6);
-  const A=Math.max(0.3,(pitch-0.8*w)/2), lam=Math.max(P.wvLambda,w*1.5);
-  const zf=i=>P.flh+i*P.lh;
-
-  const shapeLoopW=(inset,z,v,ww,h)=>{
-    const n=Math.max(160,Math.ceil(TAU*Rmax/0.35)), pts=[];
-    for(let i=0;i<=n;i++){const a=TAU*i/n, r=Math.max(1,shape(a)-inset);
-      pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a),z]);}
-    const p={pts,v,w:ww}; if(h)p.h=h; return p;
-  };
-
-  // skirt
-  paths.push(Object.assign(circlePath(cx,cy,Rmax+5,P.flh,P.v1,P.flw),{h:P.flh}));
-  paths.push(Object.assign(circlePath(cx,cy,Rmax+5-P.flw,P.flh,P.v1,P.flw),{h:P.flh}));
-
-  // base pattern reaches almost to the outline; wall bonds to these same loops
-  const fillInset=Math.max(1.1*w, P.wvRim*w+0.4*w);
-  const inside=(x,y)=>{
-    const r=Math.hypot(x,y); if(r<1e-6)return true;
-    return r<=shape(Math.atan2(y,x))-fillInset;
-  };
-
-  /* solid plinth layers: rim + shape-following spiral fill */
-  const nSolid=Math.max(0,Math.round(P.wvSolid));
-  for(let L=0;L<nSolid;L++){
-    const z=zf(L), h=L===0?P.flh:P.lh, ww=L===0?P.flw:P.lw, v=L===0?P.v1:P.vBase;
-    paths.push(shapeLoopW(ww/2,z,v,ww,h));
-    paths.push(shapeLoopW(1.5*ww,z,v,ww,h));
-    const step=ww*1.02;
-    for(let rr=Rmax-2.2*ww; rr>0.4; rr-=step){
-      const n=Math.max(40,Math.ceil(TAU*rr/0.4)), pts=[];
-      const seam=L*0.5+(rr/step)*0.15;
-      for(let k=0;k<=n;k++){const a=seam+TAU*k/n, r=Math.min(rr,shape(a)-2.2*ww);
-        pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a),z]);}
-      paths.push({pts,v,w:ww,h});
-    }
-  }
-
-  /* coral base: differential growth clipped to the tray shape */
-  if(P.wvBase==='growth'){
-    const g=annulusGrowth(0, a=>Math.max(2,shape(a)-fillInset),
-      Math.max(P.wvGap,w*1.6), P.wvSeed);
-    for(let L=0;L<P.wvLayers;L++){
-      const z=zf(nSolid+L), h=(nSolid===0&&L===0)?P.flh:P.lh, v=(nSolid===0&&L===0)?P.v1:Math.min(P.vBase*0.7,25);
-      for(let ri=0;ri<Math.max(1,P.wvRim);ri++)paths.push(shapeLoopW(w/2+ri*w*0.95,z,v,w,h));
-      paths.push({pts:g.map(q=>[cx+q[0],cy+q[1],z]),v,w,h});
-    }
-  }
-  else
-  /* weave layers: sine rows, opposite phase per row; each layer rotated by cross angle */
-  for(let L=0;L<P.wvLayers;L++){
-    const z=zf(nSolid+L), h=(nSolid===0&&L===0)?P.flh:P.lh, v=(nSolid===0&&L===0)?P.v1:Math.min(P.vBase*0.7,25);
-    for(let ri=0;ri<Math.max(1,P.wvRim);ri++)paths.push(shapeLoopW(w/2+ri*w*0.95,z,v,w,h));
-    const ang=L*P.wvCross*Math.PI/180, cA=Math.cos(ang), sA=Math.sin(ang);
-    let idx=0;
-    for(let y0=-Rmax+pitch*0.7;y0<Rmax;y0+=pitch,idx++){
-      const dir=idx%2?-1:1, ph=(idx%2)*Math.PI;
-      let run=null;
-      const flush=()=>{if(run&&run.length>3)paths.push({pts:run,v,w,h});run=null;};
-      for(let s=-Rmax;s<=Rmax;s+=0.3){
-        const x=dir*s;
-        const yy=y0+A*Math.sin(TAU*x/lam+ph);
-        const X=x*cA-yy*sA, Y=x*sA+yy*cA;   // rotate row direction per layer
-        if(inside(X,Y)){if(!run)run=[];run.push([cx+X,cy+Y,z]);}
-        else flush();
-      }
-      flush();
-    }
-  }
-
-  /* wall: rope coil following the shape, interlocking wobble */
-  const ramp0=Math.max(0,Math.round(P.wvSolid))+P.wvLayers;
-  const baseTop=ramp0>0?zf(ramp0-1):P.flh;
-  for(let j=0;j<P.wvWallLayers;j++){
-    const z=zf(ramp0+j);
-    const ramp=Math.min(1,j/3), alt=(j%2)*Math.PI;
-    const t=j/Math.max(1,P.wvWallLayers-1);
-    const curve=P.wvCurveOn?(profileAt(t)-profileAt(0))*P.wvCurveD/0.5:0;
-    const flare=P.wvFlare*j+curve;
-    const tw=P.wvTwistW*Math.PI/180*j;
-    if(j===0){const vb=Math.min(P.vWall,22);paths.push(shapeLoopW(w/2,z,vb,w));paths.push(shapeLoopW(1.5*w,z,vb,w));}
-    const n=Math.max(200,Math.ceil(TAU*(Rmax+flare)/0.3)), pts=[];
-    const seam=j*2.399963;
-    for(let i=0;i<=n;i++){
-      const a=seam+TAU*i/n;
-      const rb=Math.max(1,shape(a-tw)-(0.5+ (Math.max(1,P.wvRim)-1)*0.5)*w + flare);   // same floor as base loops
-      const r=Math.max(0.3,rb+P.wvRAmp*ramp*Math.sin(P.wvK*a+alt));
-      const zz=Math.max(baseTop+0.4, z+P.wvZAmp*ramp*Math.sin(P.wvK*a+alt+Math.PI/2));
-      pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a),zz]);
-    }
-    paths.push({pts,v:Math.min(P.vWall,22),w});
-  }
-  return paths;
-}
-
-/* ================= vase builder ================= */
-function patFn(name,fa,fz,off,H){
-  // returns d(theta, zAbsMm, zRel) in [-1,1]
-  switch(name){
-    case 'sine':     return (a,z,t)=>Math.sin(fa*a+off);
-    case 'ripple':   return (a,z,t)=>Math.sin(TAU*fz*t+off);
-    case 'vwave':    return (a,z,t)=>Math.sin(fa*a+off+2.2*Math.sin(TAU*fz*t));
-    case 'hwave':    return (a,z,t)=>Math.sin(TAU*fz*t+off+1.6*Math.sin(3*a));
-    case 'bumps':    return (a,z,t)=>Math.sin(fa*a+off)*Math.sin(TAU*fz*t);
-    case 'diamond':  return (a,z,t)=>0.5*(Math.sin(fa*a+TAU*fz*t+off)+Math.sin(fa*a-TAU*fz*t+off));
-    case 'pleats':   return (a,z,t)=>{const u=((fa*a+off)/TAU)%1;return 2*Math.abs(2*(u-Math.floor(u+0.5)))-1;};
-    case 'guilloche':return (a,z,t)=>0.5*(Math.sin(fa*a+TAU*fz*t+off)+Math.sin((fa+3)*a-TAU*fz*t+off));
-    case 'hammered': return (a,z,t)=>{const n=vnoise(a/TAU*fa,t*fz);return Math.max(0,(n-0.45)*2.4)-0.35;};
-    default:         return ()=>0;
-  }
-}
-function buildVase(P){
-  const paths=[], cx=P.cx, cy=P.cx;
-  const Rx=P.vLenX/2, sy=P.vWidY/P.vLenX;
-  const H=P.vH, seg=P.vSides>=3?TAU/P.vSides:0;
-  const crF=P.vSides>=3?Math.min(P.vCorner/Rx,0.9):0;
-  const shape=a=>{
-    if(!seg)return 1;
-    const m=((a%seg)+seg)%seg;
-    const poly=Math.cos(seg/2)/Math.cos(m-seg/2);
-    return (1-crF)*poly+crF;
-  };
-  const rAt=(a,t)=>Rx*profileAt(t)*shape(a);
-  const zf=i=>P.flh+i*P.lh;
-  const twistPerMm=P.vTwist*Math.PI/180;
-  const pat=patFn(P.pPat,P.pFreq,P.pFreqZ,P.pOff*Math.PI/180,H);
-  const fade=zmm=>{
-    let f=1;
-    if(P.pFadeIn>0)f=Math.min(f,zmm/P.pFadeIn);
-    if(P.pFadeOut>0)f=Math.min(f,(H-zmm)/P.pFadeOut);
-    return Math.max(0,Math.min(1,f));
-  };
-  // sample bottom shape extremes
-  let bMax=0,bMin=1e9;
-  for(let k=0;k<180;k++){const r=rAt(TAU*k/180,0);if(r>bMax)bMax=r;if(r<bMin)bMin=r;}
-
-  // skirt (elliptical when Y≠X, matching the sy-scaled wall)
-  const skirt=off=>{
-    const rx=bMax+off, ry=bMax*sy+off;
-    const n=Math.max(120,Math.ceil(TAU*Math.max(rx,ry)/0.35)), pts=[];
-    for(let i=0;i<=n;i++){const a=TAU*i/n;pts.push([cx+rx*Math.cos(a),cy+ry*Math.sin(a),P.flh]);}
-    return {pts,v:P.v1,w:P.flw,h:P.flh};
-  };
-  paths.push(skirt(5)); paths.push(skirt(5-P.flw));
-
-  const shapeLoop=(offIn,z,v,w)=>{ // loop following bottom cross-section, inset offIn
-    const n=Math.max(120,Math.ceil(TAU*bMax/0.35)), pts=[];
-    for(let i=0;i<=n;i++){const a=TAU*i/n, r=Math.max(0.5,rAt(a,0)-offIn);
-      pts.push([cx+r*Math.cos(a),cy+r*sy*Math.sin(a),z]);}
-    return {pts,v,w};
-  };
-
-  /* ---- floor ---- */
-  const nF=P.fFill==='none'?0:Math.max(0,Math.round(P.fLayers));
-  for(let i=0;i<nF;i++){
-    const z=zf(i), w=i===0?P.flw:P.lw, h=i===0?P.flh:P.lh, v=i===0?P.v1:P.vBase;
-    const lp=[];   // this layer's paths; odd layers run in reverse so the
-    lp.push(Object.assign(shapeLoop(w/2,z,v,w),{h}));   // next layer starts where this one ends
-    lp.push(Object.assign(shapeLoop(1.5*w,z,v,w),{h}));
-    if(P.fFill==='rings'){
-      const step=w*1.02;
-      for(let r=bMax-2.2*w; r>0.4; r-=step){
-        const n=Math.max(40,Math.ceil(TAU*r/0.4)), pts=[];
-        const seam=i*0.4+(r/step)*0.15;
-        for(let k=0;k<=n;k++){const a=seam+TAU*k/n, rr=Math.min(r,rAt(a,0)-2.2*w);
-          pts.push([cx+rr*Math.cos(a),cy+rr*sy*Math.sin(a),z]);}
-        lp.push({pts,v,w,h});
-      }
-    }
-    else if(P.fFill==='spiral'){
-      const turns=Math.ceil((bMax-2.2*w)/(w*1.05));
-      const n=Math.max(200,Math.ceil(turns*TAU*bMax*0.5/0.4));
-      const pts=[];
-      for(let k=0;k<=n;k++){
-        const th=turns*TAU*k/n + i*0.5, u=1-k/n;
-        const r=Math.max(0.4,u*(rAt(th,0)-2.2*w));
-        pts.push([cx+r*Math.cos(th),cy+r*sy*Math.sin(th),z]);
-        if(r<=0.45)break;
-      }
-      lp.push({pts,v,w,h});
-    }
-    if(P.fFill==='linear'){
-      const Rl=bMin-2.2*w, sp=w*1.05, ang=(i%2)*Math.PI/2+0.4;
-      const ca=Math.cos(ang),sa=Math.sin(ang);
-      let pts=[],dir=1;
-      for(let y=-Rl+sp/2;y<Rl;y+=sp){
-        const x=Math.sqrt(Math.max(0,Rl*Rl-y*y));
-        const a=[-x*dir,y],b=[x*dir,y];
-        pts.push([cx+a[0]*ca-a[1]*sa,cy+(a[0]*sa+a[1]*ca)*sy,z]);
-        pts.push([cx+b[0]*ca-b[1]*sa,cy+(b[0]*sa+b[1]*ca)*sy,z]);
-        dir=-dir;
-      }
-      if(pts.length>1)lp.push({pts,v,w,h});
-    }
-    else if(P.fFill==='lamp'){
-      const rIn=P.fInnerD/2;
-      const loops=Math.max(2,Math.round(P.fRingT/w));
-      for(let k=0;k<loops;k++)
-        lp.push(Object.assign(circlePath(cx,cy,rIn+w/2+k*w*0.95,z,v,w),{h}));
-      // spokes (ring stays circular for the E27 socket; spokes reach the sy-scaled wall)
-      const bnd=phi=>{const al=Math.atan2(Math.sin(phi),sy*Math.cos(phi));
-        const rr=rAt(al,0);return Math.hypot(rr*Math.cos(al),sy*rr*Math.sin(al));};
-      const r1=rIn+loops*w;
-      const m=Math.max(1,Math.round(P.fSpokeW/w));
-      for(let sK=0;sK<P.fSpokes;sK++){
-        const a=TAU*sK/P.fSpokes + i*0.3;
-        const ux=Math.cos(a),uy=Math.sin(a),px=-uy,py=ux;
-        const rOut=Math.max(r1+w,bnd(a)-2*w);
-        for(let j=0;j<m;j++){
-          const o=(j-(m-1)/2)*w*0.95;
-          const inv=j%2;
-          const A=[cx+ux*r1+px*o, cy+uy*r1+py*o, z];
-          const B=[cx+ux*rOut+px*o, cy+uy*rOut+py*o, z];
-          lp.push({pts:inv?[B,A]:[A,B],v,w,h});
-        }
-      }
-    }
-    // alternate direction so each layer ends where the next begins, with the LAST
-    // floor layer ending at the outer edge — right where the wall takes over
-    if((nF-1-i)%2===0){lp.reverse();lp.forEach(p=>p.pts.reverse());}
-    paths.push(...lp);
-  }
-
-  /* ---- wall ---- */
-  const wallLayers=Math.max(1,Math.round(H/P.lh));
-  const zBase=nF?zf(nF-1):P.flh-P.lh;   // wall layer j sits at zBase+(j+1)*lh; if no floor, first wall layer = flh
-  const stitch=P.stOn&&P.stDepth>0;
-  const wallPoint=(a,t,zmm)=>{
-    const aP=a+twistPerMm*zmm;          // twist rotates the pattern phase
-    return rAt(a,t)+P.pAmp*fade(zmm)*pat(aP,zmm,t);
-  };
-  const perim0=TAU*Rx*0.9;
-  const nSeg=Math.max(140,Math.ceil(perim0/(stitch?0.25:0.4)));   // finer sampling keeps stitch bumps round
-
-  // wall speed guarded by the 0.4-nozzle volumetric ceiling (12 mm^3/s), not a flat cap —
-  // OGcode prints stitched walls at full print speed and so do we
-  const vWallEff=Math.min(P.vWall,12/Math.max(0.01,P.lw*P.lh));
-  const emit=(pts,wpts,v,anyW,extra)=>{
-    const p={pts,v,w:P.lw};
-    if(anyW)p.wpts=wpts;
-    if(extra)Object.assign(p,extra);
-    paths.push(p);
-  };
-
-  if(P.vSpiral){
-    // seal loops
-    const z0=zBase+P.lh;
-    paths.push(Object.assign(shapeLoop(P.lw/2,z0,vWallEff,P.lw),nF===0?{h:P.flh,w:P.flw}:{}));
-    const total=wallLayers*nSeg, pts=[], wpts=[];
-    let anyW=false, sArc=0;
-    let prevA=0, prevR=rAt(0,0);
-    for(let k=0;k<=total;k++){
-      const th=TAU*k/nSeg;
-      const a=th%TAU;
-      const frac=k/total;
-      const zmm=frac*H;
-      const t=frac;
-      const z=z0+frac*(wallLayers-1)*P.lh;
-      let r=wallPoint(a,t,zmm);
-      let wq=P.lw;
-      if(stitch){
-        sArc+=Math.abs(th-prevA)*prevR; prevA=th; prevR=r;
-        const shift=(Math.floor(zmm/P.lh))*P.stLayerOff*P.stSpace;
-        const u=((sArc+shift)%P.stSpace+P.stSpace)%P.stSpace;
-        if(u<P.stLen){
-          const q=u/P.stLen;
-          const tri=1-Math.abs(2*q-1), rnd=Math.sin(Math.PI*q);
-          const bump=(1-P.stShape)*tri+P.stShape*rnd;
-          r+=P.stDepth*bump*fade(zmm);
-          if(P.stFlow>0){wq=P.lw*(1-P.stFlow*bump);anyW=true;}
-        }
-      }
-      if(r<0.3)r=0.3;
-      pts.push([cx+r*Math.cos(a),cy+r*sy*Math.sin(a),z]);
-      wpts.push(wq);
-    }
-    emit(pts,wpts,vWallEff,anyW);
-  } else {
-    for(let j=0;j<wallLayers;j++){
-      const z=zBase+(j+1)*P.lh;
-      const zm=(j+0.5)/wallLayers*H, t=j/(Math.max(1,wallLayers-1));
-      const seam=j*2.399963;
-      const pts=[],wpts=[]; let anyW=false,sArc=0,prevA=seam,prevR=rAt(seam,t);
-      for(let i=0;i<=nSeg;i++){
-        const th=seam+TAU*i/nSeg, a=th%TAU;
-        let r=wallPoint(a,t,zm);
-        let wq=P.lw;
-        if(stitch){
-          sArc+=Math.abs(th-prevA)*prevR; prevA=th; prevR=r;
-          const shift=j*P.stLayerOff*P.stSpace;
-          const u=((sArc+shift)%P.stSpace+P.stSpace)%P.stSpace;
-          if(u<P.stLen){
-            const q=u/P.stLen;
-            const tri=1-Math.abs(2*q-1), rnd=Math.sin(Math.PI*q);
-            const bump=(1-P.stShape)*tri+P.stShape*rnd;
-            r+=P.stDepth*bump*fade(zm);
-            if(P.stFlow>0){wq=P.lw*(1-P.stFlow*bump);anyW=true;}
-          }
-        }
-        if(r<0.3)r=0.3;
-        pts.push([cx+r*Math.cos(a),cy+r*sy*Math.sin(a),z]);
-        wpts.push(wq);
-      }
-      emit(pts,wpts,vWallEff,anyW,(nF===0&&j===0)?{h:P.flh,w:P.flw}:null);
-    }
-  }
-  return paths;
-}
-
-
-/* ===== live sliders: wrap every number input with a synced range ===== */
-const SLIDER_RANGE={
-  // id: [min,max,step]  (fallbacks derived from step attribute otherwise)
-  wvLen:[40,220,2], wvTri:[0,40,1], wvEgg:[0,40,1], wvSides:[0,12,1], wvCornerR:[0,40,1],
-  wvRot:[0,360,5], wvRim:[0,5,1], wvPitch:[1.2,8,0.1], wvLambda:[1,8,0.1], wvStrand:[0.4,1.6,0.05],
-  wvLayers:[1,6,1], wvCross:[0,180,5], wvSolid:[0,10,1], wvGap:[1.5,8,0.1], wvSeed:[1,999,1],
-  wvWallLayers:[0,120,1], wvK:[8,160,2], wvZAmp:[0,3,0.1], wvRAmp:[0,3,0.1], wvFlare:[-0.3,0.6,0.02],
-  wvCurveD:[0,40,1], wvTwistW:[-6,6,0.25],
-  vLenX:[20,220,2], vWidY:[20,220,2], vH:[10,240,2], vCorner:[0,40,1], vTwist:[-10,10,0.5],
-  pAmp:[0,8,0.1], pFreq:[2,80,1], pFreqZ:[0,40,1], pOff:[0,360,5], pFadeIn:[0,60,2], pFadeOut:[0,60,2],
-  stDepth:[0,4,0.1], stSpace:[1,20,0.5], stLen:[0.5,15,0.5], stShape:[0,1,0.05],
-  stLayerOff:[0,1,0.05], stFlow:[0,1,0.05],
-  fLayers:[0,12,1], fInnerD:[10,120,1], fRingT:[1,30,1], fSpokes:[0,16,1], fSpokeW:[1,40,1],
-  dia:[30,220,2], baseLayers:[1,10,1], holeD:[0,120,2], gapS:[1.5,8,0.1], strandW:[0.4,1.6,0.05],
-  seed:[1,999,1], cell:[1.5,8,0.2], wlen:[1.5,8,0.2], wN:[2,24,1], wAmp:[0,3,0.1], hCell:[1.2,8,0.2],
-  wallLayers:[0,120,5], finN:[6,120,2], finDepth:[0.5,6,0.2], twist:[-5,5,0.2], flare:[-0.2,0.4,0.02],
-  ringD:[30,180,5], kN:[8,120,2], kZ:[0,4,0.1], kR:[0,4,0.1], kLayers:[4,120,2],
-  lh:[0.08,0.4,0.02], lw:[0.3,1.2,0.05], flh:[0.1,0.5,0.05], flw:[0.3,1.2,0.05],
-  flow:[0.6,1.5,0.02], tN:[170,270,5], tB:[0,110,5], v1:[5,60,1], vBase:[10,120,5],
-  vWall:[10,120,5], vT:[40,300,10], fanPct:[0,100,5], fanL:[0,20,1], cx:[50,220,1]
-};
-function buildSliders(){
-  document.querySelectorAll('#ctrl .row').forEach(row=>{
-    const inp=row.querySelector('input[type=number]');
-    if(!inp)return;
-    const id=inp.id, rng=SLIDER_RANGE[id];
-    let mn,mx,st;
-    if(rng){[mn,mx,st]=rng;}
-    else{st=parseFloat(inp.step)||1; const v=parseFloat(inp.value)||0; mn=Math.min(0,v); mx=v*2||10;}
-    const slider=document.createElement('input');
-    slider.type='range'; slider.min=mn; slider.max=mx; slider.step=st; slider.value=inp.value;
-    inp.classList.add('val');
-    row.classList.add('slider');
-    row.insertBefore(slider, inp);
-    slider.addEventListener('input',()=>{inp.value=slider.value; liveGen();});
-    inp.addEventListener('input',()=>{slider.value=inp.value; liveGen();});
-  });
-}
-let liveTimer=null;
-function liveGen(){
-  if(liveTimer)clearTimeout(liveTimer);
-  liveTimer=setTimeout(()=>{generate();},110);   // debounce for heavy modes
-}
-
-/* ================= params ================= */
-let vSides=6;
-function readParams(){
-  const P={};
-  ['dia','baseLayers','cell','wlen','wN','wAmp','hCell','wallLayers','finN','finDepth',
-   'twist','flare','ringD','kN','kZ','kR','kLayers','lh','lw','flow','tN','tB',
-   'v1','vBase','vWall','vT','fanL','cx','holeD','gapS','strandW','seed',
-   'vLenX','vWidY','vH','vCorner','vTwist','pAmp','pFreq','pFreqZ','pOff','pFadeIn','pFadeOut',
-   'stDepth','stSpace','stLen','stShape','stLayerOff','stFlow',
-   'fLayers','fInnerD','fRingT','fSpokes','fSpokeW','flh','flw','fanPct',
-   'wvLen','wvTri','wvEgg','wvRot','wvPitch','wvLambda','wvStrand','wvLayers',
-   'wvWallLayers','wvK','wvZAmp','wvRAmp','wvFlare','wvCross','wvSolid','wvCurveD',
-   'wvSides','wvCornerR','wvGap','wvSeed','wvRim','wvTwistW'
-  ].forEach(k=>P[k]=num(k));
-  P.mode=$('mode').value; P.pattern=$('pattern').value;
-  P.wallOn=$('wallOn').checked; P.brim=$('brim').checked;
-  P.vSpiral=$('vSpiral').checked; P.stOn=$('stOn').checked; P.wvCurveOn=$('wvCurveOn').checked;
-  P.wvBase=$('wvBase').value;
-  P.pPat=$('pPat').value; P.fFill=$('fFill').value;
-  P.vSides=vSides;
-  /* guard rails: blank/zero typed values must never yield NaN, F0 or infinite loops */
-  P.lh=Math.max(P.lh,0.02); P.flh=Math.max(P.flh,0.02);
-  P.lw=Math.max(P.lw,0.05); P.flw=Math.max(P.flw,0.05);
-  P.wvStrand=Math.max(P.wvStrand,0.05); P.strandW=Math.max(P.strandW,0.05);
-  P.vLenX=Math.max(P.vLenX,1); P.vWidY=Math.max(P.vWidY,0.5); P.wvLen=Math.max(P.wvLen,1);
-  P.dia=Math.max(P.dia,1); P.ringD=Math.max(P.ringD,1);
-  P.stSpace=Math.max(P.stSpace,0.2); P.flow=Math.max(P.flow,0);
-  P.v1=Math.max(P.v1,1); P.vBase=Math.max(P.vBase,1); P.vWall=Math.max(P.vWall,1); P.vT=Math.max(P.vT,1);
-  return P;
-}
-
-/* ================= gcode ================= */
-function toGcode(paths,P){
-  const out=[];
-  out.push($('gStart').value.replaceAll('{BED}',P.tB).replaceAll('{NOZ}',P.tN));
-  out.push('M106 P1 S0 ; part cooling fan off for initial layers');
-  const ePerMM=(w,h)=>P.flow*w*h/FIL_A;
-  let cur=null,totalE=0,extLen=0,trvLen=0,fanOn=false,lastZ=-1,lastLayer=0;
-  const f3=x=>x.toFixed(3), f5=x=>x.toFixed(5);
-  const fanS=Math.round(255*Math.max(0,Math.min(100,P.fanPct||100))/100);
-  const fanZ=P.flh+(P.fanL-1)*P.lh-1e-6;   // layer n starts at flh+(n-1)*lh
-  const capV=p=>p.w>=0.6?Math.min(p.v,25):p.v;   // fat strands sag at speed
-  let zTop=0; for(const p of paths)for(const q of p.pts)if(q[2]>zTop)zTop=q[2];
-  const layerOf=z=>Math.max(1,Math.round((z-P.flh)/P.lh)+1);
-  const totalLayers=layerOf(zTop);
-  const layerMark=z=>{      // CHANGE_LAYER + progress, once per layer, never regresses
-    const ly=layerOf(z);
-    if(ly>lastLayer){lastLayer=ly;
-      out.push('; CHANGE_LAYER');
-      out.push(`; Z_HEIGHT: ${f3(z)}`);
-      out.push(`; layer num/total_layer_count: ${ly}/${totalLayers}`);
-      out.push('M73 L'+ly);
-      out.push('M73 P'+Math.max(1,Math.min(99,Math.round(100*ly/totalLayers))));
-    }
-  };
-  for(const p of paths){
-    const s=p.pts[0], hgt=p.h||P.lh;
-    if(!fanOn && s[2]>fanZ){out.push(`M106 P1 S${fanS} ; part cooling fan on`);fanOn=true;}
-    if(s[2]!==lastZ){out.push(`;Z ${f3(s[2])}`);lastZ=s[2];}
-    if(cur){
-      const d=Math.hypot(s[0]-cur[0],s[1]-cur[1],s[2]-cur[2]);
-      trvLen+=d;
-      if(d>25){   // long jump: retract + z-hop; short hops stay plain G0 (continuous flow)
-        out.push('G1 E-0.8 F1800');
-        out.push(`G0 Z${f3(Math.max(cur[2],s[2])+0.4)} F6000`);
-        out.push(`G0 X${f3(s[0])} Y${f3(s[1])} F${Math.round(P.vT*60)}`);
-        out.push(`G0 Z${f3(s[2])} F6000`);
-        out.push('G1 E0.8 F1800');
-      }else if(d>1e-6) out.push(`G0 X${f3(s[0])} Y${f3(s[1])} Z${f3(s[2])} F6000`);
-    }else out.push(`G0 X${f3(s[0])} Y${f3(s[1])} Z${f3(s[2])} F${Math.round(P.vT*60)}`);
-    const F=Math.round(capV(p)*60);
-    let needF=true;
-    for(let i=1;i<p.pts.length;i++){
-      const a=p.pts[i-1],b=p.pts[i];
-      const d=Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]);
-      if(d<1e-4)continue;
-      layerMark(b[2]);
-      const w=p.wpts?(p.wpts[i-1]+p.wpts[i])/2:p.w;
-      const e=d*ePerMM(w,hgt); totalE+=e; extLen+=d;
-      out.push(`G1 X${f3(b[0])} Y${f3(b[1])} Z${f3(b[2])} E${f5(e)}${needF?' F'+F:''}`);
-      needF=false;
-    }
-    cur=p.pts[p.pts.length-1];
-  }
-  out.push('M106 P1 S0 ; part cooling fan off');
-  out.push($('gEnd').value
-    .replaceAll('{ZAFTER}',f3(Math.min(zTop+0.5,250)))
-    .replaceAll('{ZPARK2}',f3(Math.min(zTop+98,248)))
-    .replaceAll('{ZPARK}',f3(Math.min(zTop+100,250)))
-    .replaceAll('{BED}',P.tB).replaceAll('{NOZ}',P.tN));
-  const vol=totalE*FIL_A, g=vol*1.24/1000;
-  const tSec=paths.reduce((t,p)=>{
-    let L=0;for(let i=1;i<p.pts.length;i++){const a=p.pts[i-1],b=p.pts[i];L+=Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]);}
-    return t+L/capV(p);},0)+trvLen/P.vT;
-  const tTot=isFinite(tSec)?tSec*1.12:0, tM=Math.floor(tTot/60), tS=Math.round(tTot%60);
-  const head=[
-    '; HEADER_BLOCK_START',
-    '; BambuStudio 02.06.00.51',
-    '; generated by Pattern.wly (With Layers)',
-    `; model printing time: ${tM}m ${tS}s; total estimated time: ${tM}m ${tS}s`,
-    `; total layer number: ${totalLayers}`,
-    `; total filament length [mm] : ${totalE.toFixed(2)}`,
-    `; total filament volume [cm^3] : ${(vol/1000).toFixed(2)}`,
-    `; total filament weight [g] : ${g.toFixed(2)}`,
-    '; model label id: 1',
-    '; filament_density: 1.24',
-    '; filament_diameter: 1.75',
-    `; max_z_height: ${zTop.toFixed(2)}`,
-    '; filament: 1',
-    '; HEADER_BLOCK_END',
-    ''];
-  return {text:head.join('\n')+out.join('\n')+'\n',stats:{extLen,fil:totalE,g,tMin:tTot/60,paths:paths.length}};
-}
-
-/* ================= three.js preview ================= */
-let renderer,scene,camera,yaw=0.7,pitch=0.9,dist=180,target=new THREE.Vector3(0,0,10),lineObj=null,trvObj=null;
-function initGL(){
-  const cv=$('cv');
-  renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
-  scene=new THREE.Scene(); scene.background=new THREE.Color(0x15171a);
-  camera=new THREE.PerspectiveCamera(45,1,1,3000);
-  const g=new THREE.GridHelper(256,16,0x2e343b,0x22262b);
-  g.rotation.x=Math.PI/2; scene.add(g);
-  resize(); animate();
-  let drag=false,lx=0,ly=0;
-  cv.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId);});
-  cv.addEventListener('pointermove',e=>{if(!drag)return;
-    yaw-=(e.clientX-lx)*0.008; pitch-=(e.clientY-ly)*0.008;
-    pitch=Math.max(0.05,Math.min(1.55,pitch)); lx=e.clientX;ly=e.clientY;});
-  cv.addEventListener('pointerup',()=>drag=false);
-  cv.addEventListener('wheel',e=>{e.preventDefault();dist*=(1+Math.sign(e.deltaY)*0.1);dist=Math.max(30,Math.min(900,dist));},{passive:false});
-  window.addEventListener('resize',()=>{resize();drawProfile();});
-}
-function resize(){
-  const m=document.querySelector('main');
-  renderer.setSize(m.clientWidth,m.clientHeight,false);
-  camera.aspect=m.clientWidth/m.clientHeight; camera.updateProjectionMatrix();
-}
-function animate(){
-  requestAnimationFrame(animate);
-  camera.position.set(
-    target.x+dist*Math.sin(pitch)*Math.cos(yaw),
-    target.y+dist*Math.sin(pitch)*Math.sin(yaw),
-    target.z+dist*Math.cos(pitch));
-  camera.up.set(0,0,1); camera.lookAt(target);
-  renderer.render(scene,camera);
-}
-function showPaths(paths,P){
-  if(lineObj){scene.remove(lineObj);lineObj.geometry.dispose();}
-  if(trvObj){scene.remove(trvObj);trvObj.geometry.dispose();}
-  const cx=P.cx, verts=[],cols=[],tverts=[];
-  let zMax=0.1; paths.forEach(p=>p.pts.forEach(q=>{if(q[2]>zMax)zMax=q[2];}));
-  const c1=new THREE.Color(0x4fc3f7), c2=new THREE.Color(0xe8a33d), c=new THREE.Color();
-  let prev=null;
-  for(const p of paths){
-    if(prev){tverts.push(prev[0]-cx,prev[1]-cx,prev[2],p.pts[0][0]-cx,p.pts[0][1]-cx,p.pts[0][2]);}
-    for(let i=1;i<p.pts.length;i++){
-      const a=p.pts[i-1],b=p.pts[i];
-      verts.push(a[0]-cx,a[1]-cx,a[2],b[0]-cx,b[1]-cx,b[2]);
-      c.copy(c1).lerp(c2,b[2]/zMax);
-      cols.push(c.r,c.g,c.b,c.r,c.g,c.b);
-    }
-    prev=p.pts[p.pts.length-1];
-  }
-  const geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
-  geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
-  lineObj=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({vertexColors:true}));
-  scene.add(lineObj);
-  if($('showT').checked && tverts.length){
-    const tg=new THREE.BufferGeometry();
-    tg.setAttribute('position',new THREE.Float32BufferAttribute(tverts,3));
-    trvObj=new THREE.LineSegments(tg,new THREE.LineBasicMaterial({color:0x555c63}));
-    scene.add(trvObj);
-  }
-  target.set(0,0,zMax/2); dist=Math.max(120,zMax*3.2);
-}
-
-/* ================= presets ================= */
-const PRINTERS={p1s:{cx:128},x1c:{cx:128},a1:{cx:128},a1m:{cx:90},mk4:{cx:125},custom:null};
-const MATS={pla:{tN:220,tB:60,fanPct:100},petg:{tN:245,tB:70,fanPct:50}};
-const NOZ={'0.4':{lw:0.45,flw:0.5},'0.6':{lw:0.65,flw:0.7},'0.8':{lw:0.85,flw:0.9}};
-function loadMachineGcode(model){
-  if(model==='p1s'||model==='x1c'){
-    // real Bambu block; append explicit temps so it runs at the app's settings
-    $('gStart').value=P1S_START+
-      '\n; --- Pattern.wly temps ---\nM104 S{NOZ}\nM109 S{NOZ}\nM140 S{BED}\nG92 E0\nM83\nM981 S1 P20000 ;open spaghetti detector';
-    $('gEnd').value=P1S_END;
-  }else{
-    // other machines must not inherit the Bambu-proprietary block
-    $('gStart').value=GEN_START;
-    $('gEnd').value=GEN_END;
-  }
-}
-$('printer').onchange=()=>{const v=$('printer').value; const p=PRINTERS[v]; if(p)$('cx').value=p.cx;
-  loadMachineGcode(v);};
-loadMachineGcode($('printer').value);   // P1S real block on load
-$('mat').onchange=()=>{const m=MATS[$('mat').value];$('tN').value=m.tN;$('tB').value=m.tB;$('fanPct').value=m.fanPct;};
-$('nozzle').onchange=()=>{const n=NOZ[$('nozzle').value];$('lw').value=n.lw;$('flw').value=n.flw;};
-
-/* sides segmented control */
-function sidesSetup(){
-  const box=$('sidesSeg');
-  const opts=[0,3,4,5,6,7,8,9,10,12];
-  for(const o of opts){
-    const b=document.createElement('button');
-    b.textContent=o===0?'○':o;
-    b.onclick=()=>{vSides=o;
-      box.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
-      b.classList.add('on');};
-    if(o===0)b.classList.add('on');
-    box.appendChild(b);
-  }
-  vSides=0;
-}
-
-/* ================= save / load ================= */
-const ALL_IDS=['mode','dia','baseLayers','pattern','holeD','gapS','strandW','seed','cell','wlen',
-'wN','wAmp','hCell','wallOn','wallLayers','finN','finDepth','twist','flare','ringD','kN','kZ','kR',
-'kLayers','brim','vLenX','vWidY','vH','vCorner','vTwist','vSpiral','pPat','pAmp','pFreq','pFreqZ',
-'pOff','pFadeIn','pFadeOut','stOn','stDepth','stSpace','stLen','stShape','stLayerOff','stFlow',
-'fFill','fLayers','fInnerD','fRingT','fSpokes','fSpokeW','printer','mat','nozzle','lh','lw','flh',
-'flw','flow','tN','tB','v1','vBase','vWall','vT','fanPct','fanL','cx','gStart','gEnd',
-'wvLen','wvTri','wvEgg','wvRot','wvPitch','wvLambda','wvStrand','wvLayers',
-'wvWallLayers','wvK','wvZAmp','wvRAmp','wvFlare','wvCross','wvSolid','wvCurveD','wvCurveOn',
-'wvBase','wvSides','wvCornerR','wvGap','wvSeed','wvRim','wvTwistW'];
-$('saveBtn').onclick=()=>{
-  downloadFile(JSON.stringify(collectSettings(),null,1),'pattern_wly_settings.json','application/json');
-};
-function collectSettings(){
-  const s={sides:vSides,profile:profPts};
-  for(const id of ALL_IDS){const el=$(id);
-    s[id]=el.type==='checkbox'?el.checked:el.value;}
-  return s;
-}
-function applySettings(s){
-  for(const id of ALL_IDS){if(!(id in s))continue;const el=$(id);
-    if(el.type==='checkbox')el.checked=s[id];else el.value=s[id];}
-  if(s.profile)profPts=s.profile;
-  if(typeof s.sides==='number'){vSides=s.sides;
-    $('sidesSeg').querySelectorAll('button').forEach(b=>{
-      b.classList.toggle('on',b.textContent===(vSides===0?'○':String(vSides)));});}
-  $('mode').onchange(); $('pattern').onchange(); $('fFill').onchange(); $('wvBase').onchange();
-  drawProfile(); generate();
-}
-$('loadBtn').onclick=()=>$('loadFile').click();
-$('loadFile').onchange=e=>{
-  const f=e.target.files[0]; if(!f)return;
-  const rd=new FileReader();
-  rd.onload=()=>{
-    try{applySettings(JSON.parse(rd.result));}
-    catch(err){alert('Could not read settings file');}
-  };
-  rd.readAsText(f);
-};
-$('shareBtn').onclick=()=>{
-  const b64=btoa(unescape(encodeURIComponent(JSON.stringify(collectSettings()))));
-  const url=location.href.split('#')[0]+'#s='+b64+'&share=1';
-  const done=()=>{$('shareBtn').textContent='Link copied';
-    setTimeout(()=>$('shareBtn').textContent='Customer link',1600);};
-  if(navigator.clipboard&&navigator.clipboard.writeText)
-    navigator.clipboard.writeText(url).then(done,()=>prompt('Customer link:',url));
-  else prompt('Customer link:',url);
-};
-/* Orders POST here. Point this at an n8n webhook (or any endpoint that accepts JSON).
-   If unreachable, falls back to email with the design link. */
-const ORDER_ENDPOINT='https://natdanai2707.app.n8n.cloud/webhook/pattern-wly-order';
-async function sendOrder(){
-  const b=$('orderBtn');
-  const payload={
-    name:$('odName').value.trim(),
-    contact:$('odContact').value.trim(),
-    note:$('odNote').value.trim(),
-    link:location.href,
-    settings:collectSettings(),
-    ts:new Date().toISOString()
-  };
-  if(!payload.contact){$('odStatus').textContent='Please add a LINE ID or phone so we can reach you.';return;}
-  b.disabled=true;b.textContent='Sending…';
-  try{
-    const r=await fetch(ORDER_ENDPOINT,{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    if(!r.ok)throw new Error('bad status');
-    b.style.display='none';
-    $('odStatus').textContent='Order received — With Layers will contact you soon. You can close this page.';
-  }catch(e){
-    b.disabled=false;b.textContent='Order this print';
-    $('odStatus').textContent='Could not reach the order server — opening email instead.';
-    location.href='mailto:natdanai2707@gmail.com?subject='+
-      encodeURIComponent('Pattern.wly print order')+'&body='+
-      encodeURIComponent('Order from: '+payload.name+' ('+payload.contact+')\n'+payload.note+'\n\nDesign: '+payload.link);
-  }
-}
-function initFromHash(){
-  const h=location.hash.slice(1); if(!h)return;
-  const q={}; h.split('&').forEach(kv=>{const i=kv.indexOf('=');
-    if(i>0)q[kv.slice(0,i)]=kv.slice(i+1);});
-  if(q.share==='1'){
-    document.body.classList.add('share');
-    $('orderBtn').onclick=sendOrder;
-  }
-  if(q.s){
-    try{applySettings(JSON.parse(decodeURIComponent(escape(atob(q.s)))));}catch(e){}
-  }
-}
-
-/* ================= wiring ================= */
-let lastG=null;
-function generate(){
-  const P=readParams();
-  const paths=P.mode==='knit'?buildKnit(P):P.mode==='vase'?buildVase(P):P.mode==='weave'?buildWeave(P):buildTray(P);
-  showPaths(paths,P);
-  lastG=toGcode(paths,P);
-  const s=lastG.stats;
-  $('stats').textContent=
-    `filament ${(s.fil/1000).toFixed(2)} m · ${s.g.toFixed(1)} g\n`+
-    `path ${(s.extLen/1000).toFixed(1)} m · ~${Math.round(s.tMin)} min · ${s.paths} paths`;
-  $('dl').disabled=false; $('cp').disabled=false; $('sh').disabled=false;
-  $('tag').textContent=P.mode==='knit'?'knit ring':
-    P.mode==='vase'?`vase · ${P.pPat}${P.stOn?' + stitches':''} · ${P.fFill} floor`:
-    P.mode==='weave'?'woven tray · With Layers':
-    P.pattern+(P.wallOn?' + fin wall':'');
-}
-$('gen').onclick=generate;
-function downloadFile(text,name,mime){
-  const blob=new Blob([text],{type:mime||'application/octet-stream'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download=name; a.rel='noopener'; a.style.display='none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},3000);
-}
-$('dl').onclick=()=>{
-  if(!lastG)return;
-  downloadFile(lastG.text,'pattern_wly_'+$('mode').value+'.gcode');
-};
-$('cp').onclick=async()=>{
-  if(!lastG)return;
-  try{
-    await navigator.clipboard.writeText(lastG.text);
-    $('cp').textContent='Copied!';
-  }catch(e){
-    // fallback for webviews without clipboard API
-    const ta=document.createElement('textarea');
-    ta.value=lastG.text; document.body.appendChild(ta);
-    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-    $('cp').textContent='Copied!';
-  }
-  setTimeout(()=>$('cp').textContent='Copy',1800);
-};
-$('sh').onclick=async()=>{
-  if(!lastG)return;
-  const f=new File([lastG.text],'pattern_wly_'+$('mode').value+'.gcode',{type:'text/plain'});
-  if(navigator.canShare&&navigator.canShare({files:[f]})){
-    try{await navigator.share({files:[f],title:'Pattern.wly gcode'});}catch(e){}
-  }else{
-    $('sh').textContent='Open in Chrome';
-    setTimeout(()=>$('sh').textContent='Share',2200);
-    downloadFile(lastG.text,'pattern_wly_'+$('mode').value+'.gcode');
-  }
-};
-$('mode').onchange=()=>{
-  document.querySelectorAll('[data-mode]').forEach(el=>
-    el.style.display=el.dataset.mode.split(' ').includes($('mode').value)?'':'none');
-};
-$('pattern').onchange=()=>{
-  document.querySelectorAll('[data-pat]').forEach(el=>
-    el.style.display=el.dataset.pat===$('pattern').value?'':'none');
-};
-$('fFill').onchange=()=>{
-  document.querySelectorAll('[data-fill]').forEach(el=>
-    el.style.display=el.dataset.fill===$('fFill').value?'':'none');
-};
-$('wvBase').onchange=()=>{
-  document.querySelectorAll('[data-wvb]').forEach(el=>
-    el.style.display=el.dataset.wvb===$('wvBase').value?'':'none');
-};
-$('showT').onchange=generate;
-initGL(); sidesSetup(); profSetup(); buildSliders();
-document.querySelectorAll('#ctrl select,#ctrl input[type=checkbox]').forEach(el=>{
-  const prev=el.onchange;
-  el.addEventListener('change',()=>{ if(prev)prev.call(el); liveGen(); });
-});
-$('mode').onchange(); $('pattern').onchange(); $('fFill').onchange(); $('wvBase').onchange();
-drawProfile(); generate(); initFromHash();
+/* ---------- scroll reveal ---------- */
+(function(){
+  const io=new IntersectionObserver(es=>es.forEach(e=>{
+    if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target);}
+  }),{threshold:0.12});
+  document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+})();
 </script>
 </body>
 </html>

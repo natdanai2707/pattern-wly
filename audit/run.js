@@ -1,6 +1,6 @@
 'use strict';
 const { boot } = require('./harness');
-const HTML = process.argv[2] || require('path').join(__dirname, '..', 'index.html');
+const HTML = process.argv[2] || require('path').join(__dirname, '..', 'app.html');
 const findings = [];
 let pass = 0, fail = 0;
 function ok(cond, label) { if (cond) { pass++; } else { fail++; findings.push('FAIL: ' + label); console.log('  ✗ ' + label); } }
