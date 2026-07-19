@@ -185,11 +185,11 @@ button:disabled{opacity:.4;cursor:default}
     </div>
 
     <div class="grp" data-mode="vase"><h2>Surface texture · stitches</h2>
-      <div class="row"><label>Enable stitches</label><input type="checkbox" id="stOn"></div>
-      <div class="row"><label>Depth (mm)</label><input type="number" id="stDepth" value="1.0" step="0.1"></div>
-      <div class="row"><label>Spacing (mm)</label><input type="number" id="stSpace" value="8" step="0.5"></div>
-      <div class="row"><label>Length (mm)</label><input type="number" id="stLen" value="4" step="0.5"></div>
-      <div class="row"><label>Shape (0 sharp · 1 round)</label><input type="number" id="stShape" value="0.5" step="0.1" min="0" max="1"></div>
+      <div class="row"><label>Enable stitches</label><input type="checkbox" id="stOn" checked></div>
+      <div class="row"><label>Depth (mm)</label><input type="number" id="stDepth" value="0.7" step="0.1"></div>
+      <div class="row"><label>Spacing (mm)</label><input type="number" id="stSpace" value="2.6" step="0.5"></div>
+      <div class="row"><label>Length (mm)</label><input type="number" id="stLen" value="1.2" step="0.5"></div>
+      <div class="row"><label>Shape (0 sharp · 1 round)</label><input type="number" id="stShape" value="1.0" step="0.1" min="0" max="1"></div>
       <div class="row"><label>Layer offset (× spacing)</label><input type="number" id="stLayerOff" value="0.5" step="0.1"></div>
       <div class="row"><label>Flow modulation (0–1)</label><input type="number" id="stFlow" value="0" step="0.1" min="0" max="1"></div>
     </div>
@@ -197,8 +197,8 @@ button:disabled{opacity:.4;cursor:default}
     <div class="grp" data-mode="vase"><h2>Floor</h2>
       <div class="row"><label>Fill</label>
         <select id="fFill">
-          <option value="rings" selected>Concentric rings</option>
-          <option value="spiral">Spiral (single path)</option>
+          <option value="rings">Concentric rings</option>
+          <option value="spiral" selected>Spiral (single path)</option>
           <option value="linear">Linear</option>
           <option value="lamp">Lamp (E27 ring + spokes)</option>
           <option value="none">None (open tube)</option>
@@ -282,12 +282,12 @@ button:disabled{opacity:.4;cursor:default}
       <div class="row"><label>Flow ×</label><input type="number" id="flow" value="1.0" step="0.02"></div>
       <div class="row"><label>Nozzle (°C)</label><input type="number" id="tN" value="220" step="5"></div>
       <div class="row"><label>Bed (°C)</label><input type="number" id="tB" value="60" step="5"></div>
-      <div class="row"><label>First layer (mm/s)</label><input type="number" id="v1" value="18" step="2"></div>
-      <div class="row"><label>Base fill (mm/s)</label><input type="number" id="vBase" value="45" step="5"></div>
-      <div class="row"><label>Wall / knit (mm/s)</label><input type="number" id="vWall" value="20" step="5"></div>
+      <div class="row"><label>First layer (mm/s)</label><input type="number" id="v1" value="30" step="2"></div>
+      <div class="row"><label>Base fill (mm/s)</label><input type="number" id="vBase" value="60" step="5"></div>
+      <div class="row"><label>Wall / knit (mm/s)</label><input type="number" id="vWall" value="60" step="5"></div>
       <div class="row"><label>Travel (mm/s)</label><input type="number" id="vT" value="150" step="10"></div>
       <div class="row"><label>Part cooling fan (%)</label><input type="number" id="fanPct" value="100" step="10" min="0" max="100"></div>
-      <div class="row"><label>Fan from layer</label><input type="number" id="fanL" value="2" step="1"></div>
+      <div class="row"><label>Fan from layer</label><input type="number" id="fanL" value="3" step="1"></div>
       <div class="row"><label>Bed center X,Y (mm)</label><input type="number" id="cx" value="128" step="1"></div>
     </div>
 
@@ -819,8 +819,9 @@ function buildVase(P){
   const nF=P.fFill==='none'?0:Math.max(0,Math.round(P.fLayers));
   for(let i=0;i<nF;i++){
     const z=zf(i), w=i===0?P.flw:P.lw, h=i===0?P.flh:P.lh, v=i===0?P.v1:P.vBase;
-    paths.push(Object.assign(shapeLoop(w/2,z,v,w),{h}));
-    paths.push(Object.assign(shapeLoop(1.5*w,z,v,w),{h}));
+    const lp=[];   // this layer's paths; odd layers run in reverse so the
+    lp.push(Object.assign(shapeLoop(w/2,z,v,w),{h}));   // next layer starts where this one ends
+    lp.push(Object.assign(shapeLoop(1.5*w,z,v,w),{h}));
     if(P.fFill==='rings'){
       const step=w*1.02;
       for(let r=bMax-2.2*w; r>0.4; r-=step){
@@ -828,7 +829,7 @@ function buildVase(P){
         const seam=i*0.4+(r/step)*0.15;
         for(let k=0;k<=n;k++){const a=seam+TAU*k/n, rr=Math.min(r,rAt(a,0)-2.2*w);
           pts.push([cx+rr*Math.cos(a),cy+rr*sy*Math.sin(a),z]);}
-        paths.push({pts,v,w,h});
+        lp.push({pts,v,w,h});
       }
     }
     else if(P.fFill==='spiral'){
@@ -841,9 +842,9 @@ function buildVase(P){
         pts.push([cx+r*Math.cos(th),cy+r*sy*Math.sin(th),z]);
         if(r<=0.45)break;
       }
-      paths.push({pts,v,w,h});
+      lp.push({pts,v,w,h});
     }
-    else if(P.fFill==='linear'){
+    if(P.fFill==='linear'){
       const Rl=bMin-2.2*w, sp=w*1.05, ang=(i%2)*Math.PI/2+0.4;
       const ca=Math.cos(ang),sa=Math.sin(ang);
       let pts=[],dir=1;
@@ -854,13 +855,13 @@ function buildVase(P){
         pts.push([cx+b[0]*ca-b[1]*sa,cy+(b[0]*sa+b[1]*ca)*sy,z]);
         dir=-dir;
       }
-      if(pts.length>1)paths.push({pts,v,w,h});
+      if(pts.length>1)lp.push({pts,v,w,h});
     }
     else if(P.fFill==='lamp'){
       const rIn=P.fInnerD/2;
       const loops=Math.max(2,Math.round(P.fRingT/w));
       for(let k=0;k<loops;k++)
-        paths.push(Object.assign(circlePath(cx,cy,rIn+w/2+k*w*0.95,z,v,w),{h}));
+        lp.push(Object.assign(circlePath(cx,cy,rIn+w/2+k*w*0.95,z,v,w),{h}));
       // spokes (ring stays circular for the E27 socket; spokes reach the sy-scaled wall)
       const bnd=phi=>{const al=Math.atan2(Math.sin(phi),sy*Math.cos(phi));
         const rr=rAt(al,0);return Math.hypot(rr*Math.cos(al),sy*rr*Math.sin(al));};
@@ -875,10 +876,14 @@ function buildVase(P){
           const inv=j%2;
           const A=[cx+ux*r1+px*o, cy+uy*r1+py*o, z];
           const B=[cx+ux*rOut+px*o, cy+uy*rOut+py*o, z];
-          paths.push({pts:inv?[B,A]:[A,B],v,w,h});
+          lp.push({pts:inv?[B,A]:[A,B],v,w,h});
         }
       }
     }
+    // alternate direction so each layer ends where the next begins, with the LAST
+    // floor layer ending at the outer edge — right where the wall takes over
+    if((nF-1-i)%2===0){lp.reverse();lp.forEach(p=>p.pts.reverse());}
+    paths.push(...lp);
   }
 
   /* ---- wall ---- */
@@ -890,9 +895,11 @@ function buildVase(P){
     return rAt(a,t)+P.pAmp*fade(zmm)*pat(aP,zmm,t);
   };
   const perim0=TAU*Rx*0.9;
-  const nSeg=Math.max(140,Math.ceil(perim0/0.4));
+  const nSeg=Math.max(140,Math.ceil(perim0/(stitch?0.25:0.4)));   // finer sampling keeps stitch bumps round
 
-  const vWallEff=P.stOn?Math.min(P.vWall,25):P.vWall;
+  // wall speed guarded by the 0.4-nozzle volumetric ceiling (12 mm^3/s), not a flat cap —
+  // OGcode prints stitched walls at full print speed and so do we
+  const vWallEff=Math.min(P.vWall,12/Math.max(0.01,P.lw*P.lh));
   const emit=(pts,wpts,v,anyW,extra)=>{
     const p={pts,v,w:P.lw};
     if(anyW)p.wpts=wpts;
@@ -1045,28 +1052,40 @@ function readParams(){
 function toGcode(paths,P){
   const out=[];
   out.push($('gStart').value.replaceAll('{BED}',P.tB).replaceAll('{NOZ}',P.tN));
-  out.push('M106 S0');
+  out.push('M106 P1 S0 ; part cooling fan off for initial layers');
   const ePerMM=(w,h)=>P.flow*w*h/FIL_A;
-  let cur=null,totalE=0,extLen=0,trvLen=0,fanOn=false,lastZ=-1;
+  let cur=null,totalE=0,extLen=0,trvLen=0,fanOn=false,lastZ=-1,lastLayer=0;
   const f3=x=>x.toFixed(3), f5=x=>x.toFixed(5);
   const fanS=Math.round(255*Math.max(0,Math.min(100,P.fanPct||100))/100);
   const fanZ=P.flh+(P.fanL-1)*P.lh-1e-6;   // layer n starts at flh+(n-1)*lh
   const capV=p=>p.w>=0.6?Math.min(p.v,25):p.v;   // fat strands sag at speed
   let zTop=0; for(const p of paths)for(const q of p.pts)if(q[2]>zTop)zTop=q[2];
+  const layerOf=z=>Math.max(1,Math.round((z-P.flh)/P.lh)+1);
+  const totalLayers=layerOf(zTop);
+  const layerMark=z=>{      // CHANGE_LAYER + progress, once per layer, never regresses
+    const ly=layerOf(z);
+    if(ly>lastLayer){lastLayer=ly;
+      out.push('; CHANGE_LAYER');
+      out.push(`; Z_HEIGHT: ${f3(z)}`);
+      out.push(`; layer num/total_layer_count: ${ly}/${totalLayers}`);
+      out.push('M73 L'+ly);
+      out.push('M73 P'+Math.max(1,Math.min(99,Math.round(100*ly/totalLayers))));
+    }
+  };
   for(const p of paths){
     const s=p.pts[0], hgt=p.h||P.lh;
-    if(!fanOn && s[2]>fanZ){out.push('M106 S'+fanS);fanOn=true;}
+    if(!fanOn && s[2]>fanZ){out.push(`M106 P1 S${fanS} ; part cooling fan on`);fanOn=true;}
     if(s[2]!==lastZ){out.push(`;Z ${f3(s[2])}`);lastZ=s[2];}
     if(cur){
       const d=Math.hypot(s[0]-cur[0],s[1]-cur[1],s[2]-cur[2]);
-      if(d>0.8){
+      trvLen+=d;
+      if(d>25){   // long jump: retract + z-hop; short hops stay plain G0 (continuous flow)
         out.push('G1 E-0.8 F1800');
         out.push(`G0 Z${f3(Math.max(cur[2],s[2])+0.4)} F6000`);
         out.push(`G0 X${f3(s[0])} Y${f3(s[1])} F${Math.round(P.vT*60)}`);
         out.push(`G0 Z${f3(s[2])} F6000`);
         out.push('G1 E0.8 F1800');
-        trvLen+=d;
-      }else out.push(`G0 X${f3(s[0])} Y${f3(s[1])} Z${f3(s[2])} F${Math.round(P.vT*60)}`);
+      }else if(d>1e-6) out.push(`G0 X${f3(s[0])} Y${f3(s[1])} Z${f3(s[2])} F6000`);
     }else out.push(`G0 X${f3(s[0])} Y${f3(s[1])} Z${f3(s[2])} F${Math.round(P.vT*60)}`);
     const F=Math.round(capV(p)*60);
     let needF=true;
@@ -1074,6 +1093,7 @@ function toGcode(paths,P){
       const a=p.pts[i-1],b=p.pts[i];
       const d=Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]);
       if(d<1e-4)continue;
+      layerMark(b[2]);
       const w=p.wpts?(p.wpts[i-1]+p.wpts[i])/2:p.w;
       const e=d*ePerMM(w,hgt); totalE+=e; extLen+=d;
       out.push(`G1 X${f3(b[0])} Y${f3(b[1])} Z${f3(b[2])} E${f5(e)}${needF?' F'+F:''}`);
@@ -1081,6 +1101,7 @@ function toGcode(paths,P){
     }
     cur=p.pts[p.pts.length-1];
   }
+  out.push('M106 P1 S0 ; part cooling fan off');
   out.push($('gEnd').value
     .replaceAll('{ZAFTER}',f3(Math.min(zTop+0.5,250)))
     .replaceAll('{ZPARK2}',f3(Math.min(zTop+98,248)))
@@ -1090,7 +1111,24 @@ function toGcode(paths,P){
   const tSec=paths.reduce((t,p)=>{
     let L=0;for(let i=1;i<p.pts.length;i++){const a=p.pts[i-1],b=p.pts[i];L+=Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]);}
     return t+L/capV(p);},0)+trvLen/P.vT;
-  return {text:out.join('\n')+'\n',stats:{extLen,fil:totalE,g,tMin:tSec*1.12/60,paths:paths.length}};
+  const tTot=isFinite(tSec)?tSec*1.12:0, tM=Math.floor(tTot/60), tS=Math.round(tTot%60);
+  const head=[
+    '; HEADER_BLOCK_START',
+    '; BambuStudio 02.06.00.51',
+    '; generated by Pattern.wly (With Layers)',
+    `; model printing time: ${tM}m ${tS}s; total estimated time: ${tM}m ${tS}s`,
+    `; total layer number: ${totalLayers}`,
+    `; total filament length [mm] : ${totalE.toFixed(2)}`,
+    `; total filament volume [cm^3] : ${(vol/1000).toFixed(2)}`,
+    `; total filament weight [g] : ${g.toFixed(2)}`,
+    '; model label id: 1',
+    '; filament_density: 1.24',
+    '; filament_diameter: 1.75',
+    `; max_z_height: ${zTop.toFixed(2)}`,
+    '; filament: 1',
+    '; HEADER_BLOCK_END',
+    ''];
+  return {text:head.join('\n')+out.join('\n')+'\n',stats:{extLen,fil:totalE,g,tMin:tTot/60,paths:paths.length}};
 }
 
 /* ================= three.js preview ================= */
@@ -1165,7 +1203,7 @@ function loadMachineGcode(model){
   if(model==='p1s'||model==='x1c'){
     // real Bambu block; append explicit temps so it runs at the app's settings
     $('gStart').value=P1S_START+
-      '\n; --- Pattern.wly temps ---\nM104 S{NOZ}\nM109 S{NOZ}\nM140 S{BED}\nG92 E0\nM83';
+      '\n; --- Pattern.wly temps ---\nM104 S{NOZ}\nM109 S{NOZ}\nM140 S{BED}\nG92 E0\nM83\nM981 S1 P20000 ;open spaghetti detector';
     $('gEnd').value=P1S_END;
   }else{
     // other machines must not inherit the Bambu-proprietary block
